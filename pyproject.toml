@@ -8,4 +8,5 @@ dependencies = [
     "fastapi[standard]>=0.121.1",
     "pydantic>=2.12.4",
     "typer>=0.20.0",
+    "yaspin>=3.3.0",
 ]

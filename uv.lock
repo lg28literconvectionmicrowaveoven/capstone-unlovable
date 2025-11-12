@@ -41,6 +41,7 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "pydantic" },
     { name = "typer" },
+    { name = "yaspin" },
 ]
 
 [package.metadata]
@@ -48,6 +49,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.121.1" },
     { name = "pydantic", specifier = ">=2.12.4" },
     { name = "typer", specifier = ">=0.20.0" },
+    { name = "yaspin", specifier = ">=3.3.0" },
 ]
 
 [[package]]
@@ -578,6 +580,15 @@ wheels = [
 ]
 
 [[package]]
+name = "termcolor"
+version = "3.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/56/ab275c2b56a5e2342568838f0d5e3e66a32354adcc159b495e374cda43f5/termcolor-3.2.0.tar.gz", hash = "sha256:610e6456feec42c4bcd28934a8c87a06c3fa28b01561d46aa09a9881b8622c58", size = 14423, upload-time = "2025-10-25T19:11:42.586Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/d5/141f53d7c1eb2a80e6d3e9a390228c3222c27705cbe7f048d3623053f3ca/termcolor-3.2.0-py3-none-any.whl", hash = "sha256:a10343879eba4da819353c55cb8049b0933890c2ebf9ad5d3ecd2bb32ea96ea6", size = 7698, upload-time = "2025-10-25T19:11:41.536Z" },
+]
+
+[[package]]
 name = "typer"
 version = "0.20.0"
 source = { registry = "https://pypi.org/simple" }
@@ -747,4 +758,16 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/86/eb/20b6cdf273913d0ad05a6a14aed4b9a85591c18a987a3d47f20fa13dcc47/websockets-15.0.1-cp313-cp313-win32.whl", hash = "sha256:ba9e56e8ceeeedb2e080147ba85ffcd5cd0711b89576b83784d8605a7df455fa", size = 176393, upload-time = "2025-03-05T20:02:53.814Z" },
     { url = "https://files.pythonhosted.org/packages/1b/6c/c65773d6cab416a64d191d6ee8a8b1c68a09970ea6909d16965d26bfed1e/websockets-15.0.1-cp313-cp313-win_amd64.whl", hash = "sha256:e09473f095a819042ecb2ab9465aee615bd9c2028e4ef7d933600a8401c79561", size = 176837, upload-time = "2025-03-05T20:02:55.237Z" },
     { url = "https://files.pythonhosted.org/packages/fa/a8/5b41e0da817d64113292ab1f8247140aac61cbf6cfd085d6a0fa77f4984f/websockets-15.0.1-py3-none-any.whl", hash = "sha256:f7a866fbc1e97b5c617ee4116daaa09b722101d4a3c170c787450ba409f9736f", size = 169743, upload-time = "2025-03-05T20:03:39.41Z" },
+]
+
+[[package]]
+name = "yaspin"
+version = "3.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "termcolor" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f9/cd/3d2877a5558fdad6de4166fa0160dc49cb1382820cd955753c67b56facd2/yaspin-3.3.0.tar.gz", hash = "sha256:505c9a44c6e3723a1bee8f7a17a055b17475176b74dd93e468fa8db48c172a41", size = 42411, upload-time = "2025-10-11T08:52:15.416Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2c/bd/980187b627f9c5126ecbe909cc23f7d2c23ea4b046b2d3511d80ea0a8b79/yaspin-3.3.0-py3-none-any.whl", hash = "sha256:ab5113be4b34ef33f7d4d97be9b6867101ad020c2fb02bc92e3137c75b06d712", size = 21800, upload-time = "2025-10-11T08:52:13.932Z" },
 ]

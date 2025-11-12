@@ -1,11 +1,23 @@
 Template for creating and submitting MAT496 capstone project.
 
+# Requyirements
+
+1. `uv` (to set up the project)
+2. Model provider API keys, or Ollama installed for local inference
+3. `npm`
+
+# Instructions to run
+
+1. Clone this repository
+2. Run `uv sync`
+3. Run `uv run main.py` to launch Unlovable
+
 # Overview of MAT496
 
 In this course, we have primarily learned Langgraph. This is helpful tool to build apps which can process unstructured `text`, find information we are looking for, and present the format we choose. Some specific topics we have covered are:
 
 - Prompting
-- Structured Output 
+- Structured Output
 - Semantic Search
 - Retreaval Augmented Generation (RAG)
 - Tool calling LLMs & MCP
@@ -13,42 +25,41 @@ In this course, we have primarily learned Langgraph. This is helpful tool to bui
 
 We also learned that Langsmith is a nice tool for debugging Langgraph codes.
 
-------
+---
 
 # Capstone Project objective
 
 The first purpose of the capstone project is to give a chance to revise all the major above listed topics. The second purpose of the capstone is to show your creativity. Think about all the problems which you can not have solved earlier, but are not possible to solve with the concepts learned in this course. For example, We can use LLM to analyse all kinds of news: sports news, financial news, political news. Another example, we can use LLMs to build a legal assistant. Pretty much anything which requires lots of reading, can be outsourced to LLMs. Let your imagination run free.
 
-
--------------------------
+---
 
 # Project report Template
 
-## Title: [your title goes here]
+## Title: Unlovable
 
 ## Overview
 
-[your overview goes here. My project does this that  etc]
+Unlovable is a multi-agent AI tool for even those with the least literacy in technology and web development to create beautiful MPAs (multi-page applications) fitting their needs. All they need to do is create folders with `.txt` files containing a prompt for each route in their site. Or they can just have a single route on `/` for an SPA. After that their website is generated and loaded on their browser. If the website contains any breaking bugs, the AI should self-detect and regenerate the website to eliminate the bug. The user is given the ability to click on specific elements in the site and prompt the AI with those particular elements to further tweak or fix the site to their specifications. The website itself shall be made using Next.js, TailwindCSS, Framer Motion (for animations), and Lucide (for icons).
 
 ## Reason for picking up this project
 
-Expain how this project is aligned with this course content.
+Web Development is a tedious task that almost no one who wants to build an application wants to go through. It has way too many issues with deprecated libraries, constantly evolving technologies, and outdated documentation (especially outdated documentation). This project aims to use LangChain and LangGraph to create a multi-agent team to optimally design and then develop the site according to the user's website, making maximal use of the technologies taught in this course.
 
 ## Plan
 
 I plan to excecute these steps to complete my project.
 
-- [TODO] Step 1 involves blah blah
-- [TODO] Step 2 involves blah blah
-- [TODO] Step 3 involves blah blah
-- ...
-- [TODO] Step n involves blah blah
+- [DONE] Create CLI and server to host landing page and handle generation
+- [TODO] Write multi-agent generation workflow
+- [TODO] Host generated Next.js application with Unlovable overlay
+- [TODO] Chat UI and regeneration workflow
+- [TODO] Build/deployment
 
 ## Conclusion:
 
 I had planned to achieve {this this}. I think I have/have-not achieved the conclusion satisfactorily. The reason for your satisfaction/unsatisfaction.
 
-----------
+---
 
 # Added instructions:
 
@@ -57,15 +68,13 @@ I had planned to achieve {this this}. I think I have/have-not achieved the concl
 - `commit` History maintenance.
   - Fork this respository and build on top of that.
   - For every step in your plan, there has to be a commit.
-  - Change [TODO] to [DONE] in the plan, before you commit after that step. 
-  - The commit history should show decent amount of work spread into minimum two dates. 
-  - **All the commits done in one day will be rejected**. Even if you are capable of doing the whole thing in one day, refine it in two days.  
- 
- - Deadline: Nov 30, Sunday 11:59 pm
+  - Change [TODO] to [DONE] in the plan, before you commit after that step.
+  - The commit history should show decent amount of work spread into minimum two dates.
+  - **All the commits done in one day will be rejected**. Even if you are capable of doing the whole thing in one day, refine it in two days.
 
+- Deadline: Nov 30, Sunday 11:59 pm
 
 # Grading: total 25 marks
 
 - Coverage of most of topics in this class: 20
 - Creativity: 5
-  
