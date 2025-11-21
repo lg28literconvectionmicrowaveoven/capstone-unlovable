@@ -6,7 +6,13 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.121.1",
+    "langchain>=1.0.5",
+    "langchain-google-genai>=3.0.3",
+    "langchain-groq>=1.0.0",
+    "langchain-ollama>=1.0.0",
+    "langchain-openai>=1.0.2",
+    "langchain-text-splitters>=1.0.0",
+    "langgraph>=1.0.3",
     "pydantic>=2.12.4",
-    "typer>=0.20.0",
     "yaspin>=3.3.0",
 ]

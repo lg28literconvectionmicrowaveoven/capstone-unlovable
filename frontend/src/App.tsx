@@ -9,19 +9,45 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Spinner } from "./components/ui/spinner";
+import axios from "axios";
 
 export default function UnlovableLanding() {
   const [showPopup, setShowPopup] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [projectOpenSuccess, setPOpenSuccess] = useState(false);
+  const [openingProject, setOpeningProject] = useState(false);
 
-  const handleOpenProject = () => {
-    // Placeholder for opening a project
-  };
+  async function handleOpenButton() {
+    try {
+      const dirHandle = await (window as any).showDirectoryPicker();
+      setOpeningProject(true);
 
-  const handleNewProject = () => {
+      const files: Record<string, File> = {};
+
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === "file") {
+          files[entry.name] = await entry.getFile();
+        }
+      }
+
+      // send file metadata to your backend
+      axios.post("/api/openProject", {
+        files: Object.keys(files),
+      });
+
+      setOpeningProject(false);
+      setPOpenSuccess(true);
+    } catch (err) {
+      console.error(err);
+      setOpeningProject(false);
+    }
+  }
+
+  function handleNewProject() {
     setShowInstructions(true);
-  };
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-950">
@@ -235,6 +261,7 @@ export default function UnlovableLanding() {
               onClick={() => {
                 setShowPopup(false);
                 setShowInstructions(false);
+                setPOpenSuccess(false);
               }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -252,6 +279,7 @@ export default function UnlovableLanding() {
                 onClick={() => {
                   setShowPopup(false);
                   setShowInstructions(false);
+                  setPOpenSuccess(false);
                 }}
                 className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 transition-colors"
               >
@@ -277,19 +305,23 @@ export default function UnlovableLanding() {
 
                       <div className="space-y-3">
                         <button
-                          onClick={handleOpenProject}
-                          className="w-full flex items-center gap-4 p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group"
+                          onClick={handleOpenButton}
+                          className={`w-full flex items-center gap-4 p-6 rounded-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group ${openingProject && "grayscale"} ${projectOpenSuccess ? "bg-green-700" : "bg-white/5"}`}
                         >
-                          <div className="w-12 h-12 rounded-lg bg-linear-to-r from-blue-500 to-cyan-500 flex items-center justify-center shrink-0">
-                            <FolderOpen size={24} className="text-white" />
-                          </div>
+                          {!openingProject && (
+                            <div className="w-12 h-12 rounded-lg bg-linear-to-r from-blue-500 to-cyan-500 flex items-center justify-center shrink-0">
+                              <FolderOpen size={24} className="text-white" />
+                            </div>
+                          )}
+                          {openingProject && (
+                            <div className="w-12 h-12 rounded-lg bg-linear-to-r from-blue-500 to-cyan-500 flex items-center justify-center shrink-0">
+                              <Spinner />
+                            </div>
+                          )}
                           <div className="text-left">
                             <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors font-sans">
                               Open Project
                             </h3>
-                            <p className="text-sm text-slate-400 font-sans">
-                              Continue working on an existing project
-                            </p>
                           </div>
                         </button>
 
@@ -337,15 +369,23 @@ export default function UnlovableLanding() {
                           },
                           {
                             step: 2,
-                            title: "Create a .txt file",
+                            title: "Create an index.txt file",
                             description: "Describe your app in plain text",
                             delay: 0.2,
                           },
                           {
                             step: 3,
-                            title: "Run unlovable",
-                            description: "Watch your app come to life",
+                            title: "Define routes",
+                            description:
+                              "Create folders with index.txts to define routes (i.e., <url>/home, <url>/about)",
                             delay: 0.3,
+                          },
+                          {
+                            step: 4,
+                            title: "Run unlovable",
+                            description:
+                              "Open your folder as a project in unlovable and watch your app come to life",
+                            delay: 0.4,
                           },
                         ].map((item) => (
                           <motion.div
