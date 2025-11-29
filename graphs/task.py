@@ -1,13 +1,6 @@
-from langchain.tools import tool
-from langchain.messages import AnyMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain.messages import AnyMessage, HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
-from globals import current_project, model
-from json import load as json_load
-from typing import Literal
-from graphs.commons import search_internet
-import logging
-import subprocess
-import os
+from graphs import commons, tools
 
 TASK_SYSTEM_PROMPT = """
 You are an expert Next.js 14+ full-stack **implementation agent**. You take one task at a time from the Planner and use your available tools to perform the exact file operations, dependency installations, and searches required to complete that task.
@@ -51,6 +44,7 @@ Only use these capabilities when necessary and when in direct service of the act
 - Generate complete, functional file contents.
 - Include accurate imports and exports.
 - Follow Next.js 14+ and React best practices.
+- Ensure all TypeScript norms are followed (strict typing, no unused imports, etc.)
 - Ensure the feature works as described by the Planner.
 
 ## Output Requirements (NO EXCEPTIONS)
@@ -78,170 +72,32 @@ Any and all standard output will be discarded since this is a non-interactive en
 
 You exist solely to **execute** the Planner’s tasks with perfect accuracy using the provided tools.
 """
-
-
-@tool
-def list_dependencies() -> str:
-    """
-    Lists npm dependencies and devDependencies installed on the current NextJS project.
-    """
-    package_json = json_load(f"{current_project}/package.json")
-    return {
-        "dependencies": package_json.dependencies,
-        "devDependencies": package_json.devDependencies,
-    }
-
-
-@tool
-def install_dependencies(package_names: list[str]):
-    """
-    Installs npm packages to the current NextJS project given npm package names.
-    """
-    try:
-        npm_i_out = subprocess.run(
-            f"npm i {' '.join(package_names)}",
-            capture_output=True,
-            text=True,
-            cwd=current_project,
-            check=True,
-            shell=True,
-        )
-        return f"Successfully installed packages: {', '.join(package_names)}\n{npm_i_out.stdout}"
-    except subprocess.CalledProcessError as e:
-        error_msg = e.stderr or e.stdout or "Unknown error"
-        return (
-            f"Error installing packages: {', '.join(package_names)}\nError: {error_msg}"
-        )
-    except Exception as e:
-        return f"Unexpected error installing packages: {str(e)}"
-
-
-@tool
-def install_dev_dependencies(package_names: list[str]) -> str:
-    """
-    Installs npm development packages to the current NextJS project given npm package names.
-    """
-    try:
-        npm_i_d_out = subprocess.run(
-            f"npm i -D {' '.join(package_names)}",
-            capture_output=True,
-            text=True,
-            cwd=current_project,
-            check=True,
-            shell=True,
-        )
-        return f"Successfully installed dev packages: {', '.join(package_names)}\n{npm_i_d_out.stdout}"
-    except subprocess.CalledProcessError as e:
-        error_msg = e.stderr or e.stdout or "Unknown error"
-        return (
-            f"Error installing packages: {', '.join(package_names)}\nError: {error_msg}"
-        )
-    except Exception as e:
-        return f"Unexpected error installing dev packages: {str(e)}"
-
-
-@tool
-def read_project_file(rel_path: str) -> str:
-    """
-    Reads any file in the project given a file path where / is the project root (e.g., /src, /tsconfig.json).
-    """
-    if rel_path == "/package.json" or rel_path == "/package-lock.json":
-        return "Wrong tool"
-
-    try:
-        full_path = os.path.join(current_project, rel_path)
-
-        if not os.path.exists():
-            return "File does not exist"
-
-        with open(full_path, "r") as file:
-            return file.read()
-    except Exception as e:
-        logging.error(f"Reading from file {full_path} failed with: {str(e)}")
-        return f"Reading from file {full_path} failed with: {str(e)}"
-
-
-@tool
-def write_project_file(rel_path: str, content: str) -> str:
-    """
-    Overwrites string to any project file given a file path in where / is the project root (e.g., /src, /tsconfig.json). Creates file if does not exist.
-    """
-    if rel_path == "/package.json" or rel_path == "/package-lock.json":
-        return "Cannot modify npm packages directly"
-
-    try:
-        full_path = os.path.join(current_project, rel_path)
-
-        os.makedirs(full_path)
-
-        with open(full_path, "w") as file:
-            file.write(content)
-
-        return "Write successful"
-    except Exception as e:
-        logging.error(f"Writing to file {full_path} failed with: {str(e)}")
-        return f"Writing to file {full_path} failed with: {str(e)}"
+TOOLS_MAP = {
+    "search_internet": tools.search_internet,
+    "install_dependencies": tools.install_dependencies,
+    "install_dev_dependencies": tools.install_dev_dependencies,
+    "read_project_file": tools.read_project_file,
+    "write_project_file": tools.write_project_file,
+}
 
 
 def init_node(task: str) -> list[AnyMessage]:
     return [SystemMessage(TASK_SYSTEM_PROMPT), HumanMessage(task)]
 
 
-TOOLS_MAP = {
-    "search_internet": search_internet,
-    "install_dependencies": install_dependencies,
-    "install_dev_dependencies": install_dev_dependencies,
-    "read_project_file": read_project_file,
-    "write_project_file": write_project_file,
-}
-
-tool_llm = model.bind_tools(list(TOOLS_MAP.values()))
-
-
-def task_llm(state: list[AnyMessage]) -> list[AnyMessage]:
-    return state + [tool_llm.invoke(state)]
-
-
-def tool_executor(state: list[AnyMessage]) -> list[AnyMessage]:
-    """Node that executes tools based on the last AI message"""
-    last_message = state[-1]
-
-    tool_messages = []
-
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        for tool_call in last_message.tool_calls:
-            tool_name = tool_call["name"]
-            tool_args = tool_call["args"]
-            tool_id = tool_call["id"]
-
-            if tool_name in TOOLS_MAP:
-                result = TOOLS_MAP[tool_name].invoke(tool_args)
-            else:
-                result = f"Unknown tool: {tool_name}"
-
-            tool_messages.append(ToolMessage(content=str(result), tool_call_id=tool_id))
-
-    return state + tool_messages
-
-
-def should_continue(state: list[AnyMessage]) -> Literal["tools", END]:
-    last_message = state[-1]
-
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-
-    return END
-
-
 builder = StateGraph(input_schema=str, state_schema=list[AnyMessage])
 
 builder.add_node("init", init_node)
-builder.add_node("task", task_llm)
-builder.add_node("tools", tool_executor)
+builder.add_node("task", commons.get_tool_llm_node(TOOLS_MAP))
+builder.add_node("tools", commons.get_tool_executor(TOOLS_MAP))
 
 builder.add_edge(START, "init")
 builder.add_edge("init", "task")
-builder.add_conditional_edges("task", should_continue)
+builder.add_conditional_edges(
+    "task",
+    commons.tools_edge,
+    {"end": END, "tools": "tools"},
+)
 builder.add_edge("tools", "planner")
 
 task = builder.compile()

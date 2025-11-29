@@ -2,12 +2,11 @@ from langchain.messages import (
     SystemMessage,
     HumanMessage,
     AnyMessage,
-    ToolMessage,
 )
 from langgraph.graph import StateGraph, START, END
 from globals import model, current_project
-from typing import Literal
-from graphs.commons import search_internet
+from graphs.tools import search_internet
+from graphs import commons
 from pydantic import BaseModel, Field
 import os
 
@@ -41,6 +40,7 @@ Each task should include:
 - Key functionality and features
 - Any dependencies on other tasks
 """
+TOOLS_MAP = {"search_internet": search_internet}
 
 
 class Plan(BaseModel):
@@ -83,46 +83,6 @@ def read_prompts_node() -> list[AnyMessage]:
     return messages
 
 
-tool_llm = model.bind_tools([search_internet])
-
-
-def planner_llm(state: list[AnyMessage]) -> list[AnyMessage]:
-    """Node that calls the LLM with tool binding"""
-    return state + [tool_llm.invoke(state)]
-
-
-def tool_executor(state: list[AnyMessage]) -> list[AnyMessage]:
-    """Node that executes tools based on the last AI message"""
-    last_message = state[-1]
-
-    tool_messages = []
-
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        for tool_call in last_message.tool_calls:
-            tool_name = tool_call["name"]
-            tool_args = tool_call["args"]
-            tool_id = tool_call["id"]
-
-            if tool_name == "search_internet":
-                result = search_internet.invoke(tool_args)
-            else:
-                result = f"Unknown tool: {tool_name}"
-
-            tool_messages.append(ToolMessage(content=str(result), tool_call_id=tool_id))
-
-    return state + tool_messages
-
-
-def should_continue(state: list[AnyMessage]) -> Literal["tools", "structure_output"]:
-    """Conditional edge that determines if we should call tools or structure output"""
-    last_message = state[-1]
-
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-
-    return "structure_output"
-
-
 def structure_output(state: list[AnyMessage]) -> Plan:
     """Extract and structure the final output into Plan format"""
     structured_llm = model.with_structured_output(Plan)
@@ -140,15 +100,14 @@ def structure_output(state: list[AnyMessage]) -> Plan:
 builder = StateGraph(input_schema=str, state_schema=list[AnyMessage], output=Plan)
 
 builder.add_node("read_prompts", read_prompts_node)
-builder.add_node("planner", planner_llm)
-builder.add_node("tools", tool_executor)
+builder.add_node("planner", commons.get_tool_llm_node(TOOLS_MAP))
+builder.add_node("tools", commons.get_tool_executor(TOOLS_MAP))
 builder.add_node("structure_output", structure_output)
 
 builder.add_edge(START, "read_prompts")
 builder.add_edge("read_prompts", "planner")
 builder.add_conditional_edges(
-    "planner",
-    should_continue,
+    "planner", commons.tools_edge, {"tools": "tools", "continue": "structure_output"}
 )
 builder.add_edge("tools", "planner")
 builder.add_edge("structure_output", END)

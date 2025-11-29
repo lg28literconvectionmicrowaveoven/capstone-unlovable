@@ -3,9 +3,9 @@ import os
 import shutil
 import subprocess
 from yaspin import yaspin
-from yaspin.spinners import Spinners
 from globals import current_project
 from graphs.planner import planner, Plan
+from graphs.task import task
 
 
 def generate_project():
@@ -18,6 +18,25 @@ def generate_project():
 
     for common_task in plan.common_tasks:
         task.invoke(current_project)
+
+    for backend_task in plan.backend_tasks:
+        task.invoke(current_project)
+
+    for frontend_task in plan.frontend_tasks:
+        task.invoke(current_project)
+
+    with yaspin(color="red", text="Testing build...") as spinner:
+        try:
+            subprocess.run(
+                "npm run build",
+                capture_output=True,
+                text=True,
+                cwd=current_project,
+                shell=True,
+            )
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr or e.stdout or "Unknown error"
+            spinner.write("Test build failed.")
 
 
 # TODO: handle exceptions
@@ -34,23 +53,19 @@ def create_project():
         )
 
     with yaspin(
-        Spinners.earth, text="Creating Next.js project with default config..."
+        color="yellow", text="Creating Next.js project with default config..."
     ) as spinner:
-        n_create_output = subprocess.run(
-            [
-                "npm",
-                "create-next-app@latest",
-                current_project.split("/")[-1],
-                "yes",
-            ],
-            capture_output=True,
-            text=True,
-            cwd="./frontend",
-        )
-
-        if n_create_output.returncode != 0:
-            logging.error(f"Project creation failed: {n_create_output.stderr}")
-            spinner.write(
-                f"npx create-next-app@latest {current_project.split('/')[-1]} --yes exited with code {n_create_output.returncode}"
+        try:
+            subprocess.run(
+                f"npx create-next-app@latest {current_project.split('/')[-1]} --yes",
+                capture_output=True,
+                text=True,
+                cwd=current_project,
+                shell=True,
             )
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr or e.stdout or "Unknown error"
+            logging.error(f"Project creation failed: {error_msg}")
+            spinner.write(f"npm i exited with code {e.returncode}")
             spinner.fail("❌️")
+            return str(e)
