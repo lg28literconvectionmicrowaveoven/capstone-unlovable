@@ -4,10 +4,9 @@ import signal
 import globals
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from lib.landing import build_app, launch_app
-from lib.project import open_project
+from lib.project import generate_project
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
@@ -47,7 +46,7 @@ logging.basicConfig(
 @app.post("/api/open_project", status_code=200)
 def post_open_proj(path: str):
     globals.current_project = path
-    open_project()
+    generate_project()
 
 
 def interrupt_handler(sig, frame):
