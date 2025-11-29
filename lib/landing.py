@@ -3,13 +3,11 @@ import logging
 import subprocess
 import platform
 from yaspin import yaspin
-from globals import sigint
 
 
 def launch_app():
     os_flavor = platform.system()
     launch_cmd = []
-
     if os_flavor == "Linux":
         launch_cmd = [
             "env",
@@ -22,20 +20,15 @@ def launch_app():
         logging.error("Unsupported OS")
         exit(1)
 
-    # FIX: return code pollution
-    app_output = subprocess.run(
-        launch_cmd,
-        capture_output=True,
-        text=True,
-    )
-
-    # FIX: does not need to log error when exiting via SIGINT
-    if app_output.returncode != 0 and not sigint:
-        logging.error(f"Error when running tauri app: {app_output.stderr}")
-        exit(1)
-    else:
+    # FIX: return code 3 when GUI exits
+    try:
+        subprocess.run(launch_cmd, check=True)
         logging.info("Exiting unlovable...")
         exit(0)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Application failed with exit code: {e.returncode}")
+    except FileNotFoundError:
+        logging.error(f"Executable not found: {launch_cmd[0]}")
 
 
 def build_app():

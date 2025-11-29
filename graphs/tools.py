@@ -1,12 +1,9 @@
 from langchain.tools import tool
-from langchain_community.utilities import GoogleSerperAPIWrapper
-from globals import current_project
+from globals import current_project, serper
 from json import load as json_load
 import subprocess
 import os
 import logging
-
-serper = GoogleSerperAPIWrapper()
 
 
 @tool
@@ -36,7 +33,7 @@ def list_dependencies() -> dict[str, list[str]] | str:
 
 
 @tool
-def install_dependencies(package_names: list[str]):
+def install_dependencies(package_names: list[str]) -> str | None:
     """
     Installs npm packages to the current NextJS project given npm package names.
     """
@@ -60,7 +57,7 @@ def install_dependencies(package_names: list[str]):
 
 
 @tool
-def install_dev_dependencies(package_names: list[str]) -> str:
+def install_dev_dependencies(package_names: list[str]) -> str | None:
     """
     Installs npm development packages to the current NextJS project given npm package names.
     """
@@ -76,11 +73,55 @@ def install_dev_dependencies(package_names: list[str]) -> str:
         return f"Successfully installed dev packages: {', '.join(package_names)}\n{npm_i_d_out.stdout}"
     except subprocess.CalledProcessError as e:
         error_msg = e.stderr or e.stdout or "Unknown error"
-        return (
-            f"Error installing packages: {', '.join(package_names)}\nError: {error_msg}"
-        )
+        return f"Error installing dev packages: {', '.join(package_names)}\nError: {error_msg}"
     except Exception as e:
         return f"Unexpected error installing dev packages: {str(e)}"
+
+
+@tool
+def remove_dependencies(package_names: list[str]) -> str | None:
+    """
+    Removes npm packages currently installed on the NextJS project given npm package names.
+    """
+    try:
+        npm_rm_out = subprocess.run(
+            f"npm rm {' '.join(package_names)}",
+            capture_output=True,
+            text=True,
+            cwd=current_project,
+            check=True,
+            shell=True,
+        )
+        return f"Successfully removed packages: {', '.join(package_names)}\n{npm_rm_out.stdout}"
+    except subprocess.CalledProcessError as e:
+        error_msg = e.stderr or e.stdout or "Unknown error"
+        return (
+            f"Error removing packages: {', '.join(package_names)}\nError: {error_msg}"
+        )
+    except Exception as e:
+        return f"Unexpected error removing packages: {str(e)}"
+
+
+@tool
+def remove_dev_dependencies(package_names: list[str]) -> str | None:
+    """
+    Removes npm development packages currently installed on the NextJS project given npm package names.
+    """
+    try:
+        npm_rm_d_out = subprocess.run(
+            f"npm rm -D {' '.join(package_names)}",
+            capture_output=True,
+            text=True,
+            cwd=current_project,
+            check=True,
+            shell=True,
+        )
+        return f"Successfully removed dev packages: {', '.join(package_names)}\n{npm_rm_d_out.stdout}"
+    except subprocess.CalledProcessError as e:
+        error_msg = e.stderr or e.stdout or "Unknown error"
+        return f"Error removing dev packages: {', '.join(package_names)}\nError: {error_msg}"
+    except Exception as e:
+        return f"Unexpected error removing dev packages: {str(e)}"
 
 
 @tool
@@ -105,7 +146,7 @@ def read_project_file(rel_path: str) -> str:
 
 
 @tool
-def write_project_file(rel_path: str, content: str) -> str:
+def write_project_file(rel_path: str, content: str) -> str | None:
     """
     Overwrites string to any project file given a file path in where / is the project root (e.g., /src, /tsconfig.json). Creates file if does not exist.
     """

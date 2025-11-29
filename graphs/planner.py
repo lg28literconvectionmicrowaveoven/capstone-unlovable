@@ -97,7 +97,7 @@ def structure_output(state: list[AnyMessage]) -> Plan:
     return structured_llm.invoke(final_messages)
 
 
-builder = StateGraph(input_schema=str, state_schema=list[AnyMessage], output=Plan)
+builder = StateGraph(input_schema=None, state_schema=list[AnyMessage], output=Plan)
 
 builder.add_node("read_prompts", read_prompts_node)
 builder.add_node("planner", commons.get_tool_llm_node(TOOLS_MAP))

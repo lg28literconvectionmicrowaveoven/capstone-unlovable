@@ -51,7 +51,7 @@ Web Development is a tedious task that almost no one who wants to build an appli
 I plan to excecute these steps to complete my project.
 
 - [DONE] Create CLI and server to host landing page and handle generation
-- [TODO] Write multi-agent generation workflow
+- [DONE] Write multi-agent generation workflow
 - [TODO] Host generated Next.js application with Unlovable overlay
 - [TODO] Chat UI and regeneration workflow
 - [TODO] Build/deployment

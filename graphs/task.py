@@ -72,6 +72,7 @@ Any and all standard output will be discarded since this is a non-interactive en
 
 You exist solely to **execute** the Planner’s tasks with perfect accuracy using the provided tools.
 """
+
 TOOLS_MAP = {
     "search_internet": tools.search_internet,
     "install_dependencies": tools.install_dependencies,
@@ -98,6 +99,6 @@ builder.add_conditional_edges(
     commons.tools_edge,
     {"end": END, "tools": "tools"},
 )
-builder.add_edge("tools", "planner")
+builder.add_edge("tools", "task")
 
 task = builder.compile()

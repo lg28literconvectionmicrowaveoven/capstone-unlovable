@@ -8,9 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from lib.landing import build_app, launch_app
 from lib.project import generate_project
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
 
-load_dotenv()
+logging.basicConfig(
+    handlers=[
+        RotatingFileHandler("./unlovable.log", maxBytes=100_000_000, backupCount=3),
+        logging.StreamHandler(),
+    ],
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s]: %(message)s",
+)
 
 
 @asynccontextmanager
@@ -33,24 +39,14 @@ app.add_middleware(
 
 build_app()
 
-logging.basicConfig(
-    handlers=[
-        RotatingFileHandler("./unlovable.log", maxBytes=100_000_000, backupCount=3),
-        logging.StreamHandler(),
-    ],
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s]: %(message)s",
-)
 
-
-@app.post("/api/open_project", status_code=200)
-def post_open_proj(path: str):
+@app.post("/api/generate_project", status_code=200)
+def post_generate_project(path: str):
     globals.current_project = path
     generate_project()
 
 
-def interrupt_handler(sig, frame):
-    globals.sigint = True
+def interrupt_handler(sig, handler):
     logging.info("Exiting unlovable...")
     exit(0)
 
@@ -59,5 +55,9 @@ def serve():
     signal.signal(signal.SIGINT, interrupt_handler)
 
     uvicorn.run(
-        "main:app", host="127.0.0.1", port=8000, log_level="critical", access_log=False
+        "lib.server:app",
+        host="127.0.0.1",
+        port=8000,
+        log_level="critical",
+        access_log=False,
     )
