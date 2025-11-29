@@ -1,22 +1,24 @@
 import logging
 import uvicorn
 import signal
-import subprocess
+import globals
 from logging.handlers import RotatingFileHandler
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from lib.landing import build_app
+from lib.landing import build_app, launch_app
 from lib.project import open_project
 from contextlib import asynccontextmanager
-from webbrowser import open as wb_open
-from globals import state
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logging.info("Starting unlovable... Press ^C to exit")
-    wb_open("http://localhost:8000")
+    logging.info("Starting unlovable...")
+
+    launch_app()
 
     yield
 
@@ -44,12 +46,12 @@ logging.basicConfig(
 
 @app.post("/api/open_project", status_code=200)
 def post_open_proj(path: str):
-    state["current_project"] = path
-    result = open_project()
-    return JSONResponse(content={"status": "success", "path": path, "result": result})
+    globals.current_project = path
+    open_project()
 
 
 def interrupt_handler(sig, frame):
+    globals.sigint = True
     logging.info("Exiting unlovable...")
     exit(0)
 

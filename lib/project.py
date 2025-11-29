@@ -7,7 +7,6 @@ from yaspin.spinners import Spinners
 from globals import current_project
 
 
-# NOTE: make sure it is user-expanded
 def open_project():
     logging.info(f"Opening project {current_project}")
 

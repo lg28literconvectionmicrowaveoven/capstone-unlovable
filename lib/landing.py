@@ -1,8 +1,42 @@
 import os
 import logging
 import subprocess
+import platform
 from yaspin import yaspin
 from yaspin.spinners import Spinners
+from globals import sigint
+
+
+def launch_app():
+    os_flavor = platform.system()
+    launch_cmd = []
+
+    if os_flavor == "Linux":
+        launch_cmd = [
+            "env",
+            "__NV_DISABLE_EXPLICIT_SYNC=1",
+            "./tauri/src-tauri/target/release/frontend",
+        ]
+    elif os_flavor == "Windows":
+        launch_cmd = ["./tauri/src-tauri/target/release/frontend.exe"]
+    else:
+        logging.error("Unsupported OS")
+        exit(1)
+
+    # FIX: return code pollution
+    app_output = subprocess.run(
+        launch_cmd,
+        capture_output=True,
+        text=True,
+    )
+
+    # FIX: does not need to log error when exiting via SIGINT
+    if app_output.returncode != 0 and not sigint:
+        logging.error(f"Error when running tauri app: {app_output.stderr}")
+        exit(1)
+    else:
+        logging.info("Exiting unlovable...")
+        exit(0)
 
 
 def build_app():

@@ -1,17 +1,18 @@
-Template for creating and submitting MAT496 capstone project.
-
-# Requyirements
+# Requirements
 
 1. `uv` (to set up the project)
 2. Model provider API keys, or Ollama installed for local inference
 3. `npm`
 4. Rust/Cargo
+5. `.env` with a Serper API Key and other Model Keys
 
 # Instructions to run
 
 1. Clone this repository
 2. Run `uv sync`
 3. Run `uv run main.py` to build (only once) and launch Unlovable
+
+⚠️Does not support MacOS due to a lack of a MacBook to test with.
 
 # Overview of MAT496
 
