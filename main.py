@@ -4,13 +4,14 @@ import uvicorn
 import signal
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from lib.landing import build_landing
 from lib.project import open_project
 from contextlib import asynccontextmanager
 from webbrowser import open as wb_open
+from globals import state
 
 
 @asynccontextmanager
@@ -50,7 +51,9 @@ def get_root():
 
 @app.post("/api/open_project", status_code=200)
 def post_open_proj(path: str):
-    print(path)
+    state["current_project"] = path
+    result = open_project()
+    return JSONResponse(content={"status": "success", "path": path, "result": result})
 
 
 def interrupt_handler(sig, frame):

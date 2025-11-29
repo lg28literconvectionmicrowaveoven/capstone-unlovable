@@ -4,31 +4,40 @@ import shutil
 import subprocess
 from yaspin import yaspin
 from yaspin.spinners import Spinners
+from globals import current_project
 
 
 # NOTE: make sure it is user-expanded
-def open_project(path: str):
-    logging.info(f"Opening project {path}")
+def open_project():
+    logging.info(f"Opening project {current_project}")
 
-    if "prompts" not in os.listdir(path):
-        generate_project(path)
+    if "prompts" not in os.listdir(current_project):
+        generate_project()
 
 
 # TODO: handle exceptions
 # TODO: ignore hidden folders
-def generate_project(path: str):
-    subroutes: list[str] = os.listdir(path)
-    os.mkdir(f"{path}/prompts")
-    shutil.move(f"{path}/index.txt", f"{path}/prompts")
+def generate_project():
+    subroutes: list[str] = os.listdir(current_project)
+    os.mkdir(f"{current_project}/prompts")
+    shutil.move(f"{current_project}/index.txt", f"{current_project}/prompts")
 
     for subroute in subroutes:
-        shutil.move(f"{path}/{subroute}", f"{path}/prompts/{subroute}")
+        shutil.move(
+            f"{current_project}/{subroute}",
+            f"{current_project}/prompts/{subroute}",
+        )
 
     with yaspin(
         Spinners.earth, text="Creating Next.js project with default config..."
     ) as spinner:
         n_create_output = subprocess.run(
-            ["npm", "create-next-app@latest", path.split("/")[-1], "yes"],
+            [
+                "npm",
+                "create-next-app@latest",
+                current_project.split("/")[-1],
+                "yes",
+            ],
             capture_output=True,
             text=True,
             cwd="./frontend",
@@ -37,6 +46,6 @@ def generate_project(path: str):
         if n_create_output.returncode != 0:
             logging.error(f"Project creation failed: {n_create_output.stderr}")
             spinner.write(
-                f"npx create-next-app@latest {path.split('/')[-1]} --yes exited with code {n_create_output.returncode}"
+                f"npx create-next-app@latest {current_project.split('/')[-1]} --yes exited with code {n_create_output.returncode}"
             )
             spinner.fail("❌️")

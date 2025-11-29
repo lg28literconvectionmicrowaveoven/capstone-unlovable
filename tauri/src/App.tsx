@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Code2,
   Sparkles,
@@ -9,9 +9,9 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
-import { Spinner } from "./components/ui/spinner";
-import axios from "axios";
+import { useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
+import "./App.css";
 
 export default function UnlovableLanding() {
   const [showPopup, setShowPopup] = useState(false);
