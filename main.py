@@ -1,13 +1,12 @@
 import logging
-import starlette.status as status
 import uvicorn
 import signal
+import subprocess
 from logging.handlers import RotatingFileHandler
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from lib.landing import build_landing
+from lib.landing import build_app
 from lib.project import open_project
 from contextlib import asynccontextmanager
 from webbrowser import open as wb_open
@@ -31,8 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-build_landing()
-app.mount("/app", StaticFiles(directory="frontend/dist", html=True), name="app")
+build_app()
 
 logging.basicConfig(
     handlers=[
@@ -42,11 +40,6 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s]: %(message)s",
 )
-
-
-@app.get("/")
-def get_root():
-    return RedirectResponse(url="/app", status_code=status.HTTP_302_FOUND)
 
 
 @app.post("/api/open_project", status_code=200)

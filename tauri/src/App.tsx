@@ -33,9 +33,6 @@ export default function UnlovableLanding() {
       }
 
       // send file metadata to your backend
-      axios.post("/api/openProject", {
-        files: Object.keys(files),
-      });
 
       setOpeningProject(false);
       setPOpenSuccess(true);

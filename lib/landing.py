@@ -5,10 +5,9 @@ from yaspin import yaspin
 from yaspin.spinners import Spinners
 
 
-# TODO: fix logging not working
-def build_landing():
-    if "dist" not in os.listdir("./frontend"):
-        LANDING_BUILD_MSG = "Building landing page..."
+def build_app():
+    if "dist" not in os.listdir("./tauri"):
+        LANDING_BUILD_MSG = "Building application..."
 
         with yaspin(Spinners.earth, text=LANDING_BUILD_MSG) as spinner:
             logging.info(LANDING_BUILD_MSG)
@@ -16,7 +15,7 @@ def build_landing():
             logging.info("Installing dependencies...")
             spinner.write("> npm i")
             dep_output = subprocess.run(
-                ["npm", "i"], capture_output=True, text=True, cwd="./frontend"
+                ["npm", "i"], capture_output=True, text=True, cwd="./tauri"
             )
 
             if dep_output.returncode != 0:
@@ -30,7 +29,7 @@ def build_landing():
             logging.info("Installing dev dependencies...")
             spinner.write("> npm i -D")
             dev_dep_out = subprocess.run(
-                ["npm", "i", "-D"], capture_output=True, text=True, cwd="./frontend"
+                ["npm", "i", "-D"], capture_output=True, text=True, cwd="./tauri"
             )
 
             if dev_dep_out.returncode != 0:
@@ -41,12 +40,12 @@ def build_landing():
                 spinner.fail("❌️")
                 exit(1)
 
-            spinner.write("> npm run build")
+            spinner.write("> npm run tauri build")
             build_output = subprocess.run(
                 ["npm", "run", "build"],
                 capture_output=True,
                 text=True,
-                cwd="./frontend",
+                cwd="./tauri",
             )
 
             if build_output.returncode != 0:
