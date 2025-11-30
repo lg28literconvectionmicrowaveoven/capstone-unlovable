@@ -46,9 +46,19 @@ Unlovable is a multi-agent AI tool for even those with the least literacy in tec
 
 Web Development is a tedious task that almost no one who wants to build an application wants to go through. It has way too many issues with deprecated libraries, constantly evolving technologies, and outdated documentation (especially outdated documentation). This project aims to use LangChain and LangGraph to create a multi-agent team to optimally design and then develop the site according to the user's website, making maximal use of the technologies taught in this course.
 
+## Video Summary Link:
+
+Make a short - 3-5 min video of yourself, put it on youtube/googledrive, and put its link in your README.md.
+
+- Video format should be like this:
+- your face should be visible
+- State the overall job of your agent: what inputs it takes, and what output it gives.
+- Very quickly, explain how your agent acts on the input and spits out the output.
+- show an example run of the agent in the video
+
 ## Plan
 
-I plan to excecute these steps to complete my project.
+I plan to execute these steps to complete my project.
 
 - [DONE] Create CLI and server to host landing page and handle generation
 - [DONE] Write multi-agent generation workflow
@@ -67,13 +77,13 @@ I had planned to achieve {this this}. I think I have/have-not achieved the concl
 - This is a `solo assignment`. Each of you will work alone. You are free to talk, discuss with chatgpt, but you are responsible for what you submit. Some students may be called for viva. You should be able to each and every line of work submitted by you.
 
 - `commit` History maintenance.
-  - Fork this respository and build on top of that.
+  - Fork this repository and build on top of that.
   - For every step in your plan, there has to be a commit.
   - Change [TODO] to [DONE] in the plan, before you commit after that step.
   - The commit history should show decent amount of work spread into minimum two dates.
   - **All the commits done in one day will be rejected**. Even if you are capable of doing the whole thing in one day, refine it in two days.
 
-- Deadline: Nov 30, Sunday 11:59 pm
+- Deadline: Dec 2nd, Tuesday 11:59 pm
 
 # Grading: total 25 marks
 
