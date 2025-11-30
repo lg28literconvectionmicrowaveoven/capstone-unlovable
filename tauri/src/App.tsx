@@ -36,10 +36,12 @@ export default function UnlovableLanding() {
       return;
     }
 
-    const response = await fetch("http://localhost:8000/api/open_project", {
-      method: "POST",
-      body: dir,
-    });
+    const response = await fetch(
+      `http://localhost:8000/api/generate_project?path=${encodeURIComponent(dir)}`,
+      {
+        method: "POST",
+      },
+    );
 
     if (response.status === 200) {
       setProjectOpenSuccess(true);

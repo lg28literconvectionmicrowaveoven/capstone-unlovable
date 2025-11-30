@@ -2,12 +2,33 @@ import os
 import logging
 import subprocess
 import platform
+import sys
+import atexit
+import signal
 from yaspin import yaspin
+
+child_proc = None
+
+
+def cleanup():
+    global child_proc
+    if child_proc and child_proc.poll() is None:
+        try:
+            if platform.system() != "Windows":
+                os.killpg(os.getpgid(child_proc.pid), signal.SIGTERM)
+            else:
+                child_proc.terminate()
+        except Exception:
+            pass
+
+
+atexit.register(cleanup)
 
 
 def launch_app():
+    global child_proc
+
     os_flavor = platform.system()
-    launch_cmd = []
     if os_flavor == "Linux":
         launch_cmd = [
             "env",
@@ -18,17 +39,17 @@ def launch_app():
         launch_cmd = ["./tauri/src-tauri/target/release/frontend.exe"]
     else:
         logging.error("Unsupported OS")
-        exit(1)
+        sys.exit(1)
 
-    # FIX: return code 3 when GUI exits
     try:
-        subprocess.run(launch_cmd, check=True)
-        logging.info("Exiting unlovable...")
-        exit(0)
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Application failed with exit code: {e.returncode}")
+        child_proc = subprocess.Popen(
+            launch_cmd,
+            start_new_session=True,
+        )
+        logging.info("Tauri app launched")
     except FileNotFoundError:
         logging.error(f"Executable not found: {launch_cmd[0]}")
+        sys.exit(1)
 
 
 def build_app():
