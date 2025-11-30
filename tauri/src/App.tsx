@@ -8,6 +8,7 @@ import {
   Plus,
   X,
   Check,
+  AlertCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
@@ -22,37 +23,56 @@ export default function UnlovableLanding() {
   const [showInstructions, setShowInstructions] = useState(false);
   const [projectOpenSuccess, setProjectOpenSuccess] = useState(false);
   const [openingProject, setOpeningProject] = useState(false);
+  const [error, setError] = useState("");
 
+  // TODO: fix generation hanging the UI
   async function handleOpenButton() {
-    setOpeningProject(true);
+    try {
+      const dir = await dirOpen({
+        directory: true,
+        multiple: false,
+      });
 
-    const dir = await dirOpen({
-      directory: true,
-      multiple: false,
-    });
+      if (!dir) {
+        return;
+      }
 
-    if (!dir) {
+      setError("");
+      setOpeningProject(true);
+
+      const response = await fetch(
+        `http://localhost:8000/api/generate_project?path=${encodeURIComponent(dir)}`,
+        {
+          method: "POST",
+        },
+      );
+
       setOpeningProject(false);
-      return;
-    }
 
-    const response = await fetch(
-      `http://localhost:8000/api/generate_project?path=${encodeURIComponent(dir)}`,
-      {
-        method: "POST",
-      },
-    );
-
-    if (response.status === 200) {
-      setProjectOpenSuccess(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await open("http://localhost:8000/project");
-      await getCurrentWindow().close();
+      if (response.status === 200) {
+        setProjectOpenSuccess(true);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await open("http://localhost:8000/project");
+        await getCurrentWindow().close();
+      } else {
+        setError("Failed to generate project. Please try again.");
+      }
+    } catch (err) {
+      setOpeningProject(false);
+      setError("An error occurred. Please try again.");
+      console.error("Error opening project:", err);
     }
   }
 
   function handleNewProject() {
     setShowInstructions(true);
+  }
+
+  function closePopup() {
+    setShowPopup(false);
+    setShowInstructions(false);
+    setProjectOpenSuccess(false);
+    setError("");
   }
 
   return (
@@ -239,14 +259,9 @@ export default function UnlovableLanding() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* Backdrop */}
             <motion.div
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => {
-                setShowPopup(false);
-                setShowInstructions(false);
-                setProjectOpenSuccess(false);
-              }}
+              onClick={closePopup}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -260,11 +275,7 @@ export default function UnlovableLanding() {
               transition={{ type: "spring", duration: 0.5 }}
             >
               <button
-                onClick={() => {
-                  setShowPopup(false);
-                  setShowInstructions(false);
-                  setProjectOpenSuccess(false);
-                }}
+                onClick={closePopup}
                 className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 transition-colors"
               >
                 <X size={20} className="text-slate-400" />
@@ -287,12 +298,29 @@ export default function UnlovableLanding() {
                         Choose how you'd like to begin
                       </p>
 
+                      {error && (
+                        <motion.div
+                          className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-3"
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                        >
+                          <AlertCircle
+                            size={20}
+                            className="text-red-400 shrink-0 mt-0.5"
+                          />
+                          <p className="text-red-400 text-sm font-sans">
+                            {error}
+                          </p>
+                        </motion.div>
+                      )}
+
                       <div className="space-y-3">
                         <button
                           onClick={handleOpenButton}
+                          disabled={openingProject}
                           className={`w-full flex items-center gap-4 p-6 rounded-xl border transition-all group ${
                             openingProject
-                              ? "bg-linear-to-r from-blue-500/20 to-cyan-500/20 border-blue-400/50 animate-pulse"
+                              ? "bg-linear-to-r from-blue-500/20 to-cyan-500/20 border-blue-400/50 cursor-wait"
                               : projectOpenSuccess
                                 ? "bg-linear-to-r from-green-500/20 to-emerald-500/20 border-green-400/50"
                                 : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
@@ -312,13 +340,16 @@ export default function UnlovableLanding() {
                           )}
                           {openingProject && (
                             <>
-                              <div className="w-12 h-12 rounded-lg bg-linear-to-r from-blue-500 to-cyan-500 flex items-center justify-center shrink-0 animate-pulse">
+                              <div className="w-12 h-12 rounded-lg bg-linear-to-r from-blue-500 to-cyan-500 flex items-center justify-center shrink-0">
                                 <Spinner />
                               </div>
                               <div className="text-left">
                                 <h3 className="text-lg font-semibold text-white transition-colors font-sans">
-                                  Generating Project
+                                  Generating Project...
                                 </h3>
+                                <p className="text-sm text-slate-400 font-sans">
+                                  This may take a moment
+                                </p>
                               </div>
                             </>
                           )}
@@ -337,7 +368,8 @@ export default function UnlovableLanding() {
                         </button>
                         <button
                           onClick={handleNewProject}
-                          className="w-full flex items-center gap-4 p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group"
+                          disabled={openingProject}
+                          className="w-full flex items-center gap-4 p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <div className="w-12 h-12 rounded-lg bg-linear-to-r from-pink-500 to-purple-500 flex items-center justify-center shrink-0">
                             <Plus size={24} className="text-white" />

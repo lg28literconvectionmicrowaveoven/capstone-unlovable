@@ -1,5 +1,5 @@
 from langchain.tools import tool
-from globals import current_project, serper
+from globals import app_state
 from json import load as json_load
 import subprocess
 import os
@@ -11,7 +11,7 @@ def search_internet(query: str) -> str:
     """
     Search the internet for any query and receive a string response.
     """
-    return serper.run(query)
+    return app_state.serper.run(query)
 
 
 @tool
@@ -21,7 +21,7 @@ def list_dependencies() -> dict[str, list[str]] | str:
     """
 
     try:
-        with open(f"{current_project}/package.json") as file:
+        with open(f"{app_state.current_project}/package.json") as file:
             package_json = json_load(file)
     except Exception as e:
         return f"Failed to read package.json with error: {str(e)}"
@@ -42,7 +42,7 @@ def install_dependencies(package_names: list[str]) -> str | None:
             f"npm i {' '.join(package_names)}",
             capture_output=True,
             text=True,
-            cwd=current_project,
+            cwd=app_state.current_project,
             check=True,
             shell=True,
         )
@@ -66,7 +66,7 @@ def install_dev_dependencies(package_names: list[str]) -> str | None:
             f"npm i -D {' '.join(package_names)}",
             capture_output=True,
             text=True,
-            cwd=current_project,
+            cwd=app_state.current_project,
             check=True,
             shell=True,
         )
@@ -88,7 +88,7 @@ def remove_dependencies(package_names: list[str]) -> str | None:
             f"npm rm {' '.join(package_names)}",
             capture_output=True,
             text=True,
-            cwd=current_project,
+            cwd=app_state.current_project,
             check=True,
             shell=True,
         )
@@ -112,7 +112,7 @@ def remove_dev_dependencies(package_names: list[str]) -> str | None:
             f"npm rm -D {' '.join(package_names)}",
             capture_output=True,
             text=True,
-            cwd=current_project,
+            cwd=app_state.current_project,
             check=True,
             shell=True,
         )
@@ -133,7 +133,7 @@ def read_project_file(rel_path: str) -> str:
         return "Wrong tool"
 
     try:
-        full_path = os.path.join(current_project, rel_path)
+        full_path = os.path.join(app_state.current_project, rel_path)
 
         if not os.path.exists(full_path):
             return "File does not exist"
@@ -154,7 +154,7 @@ def write_project_file(rel_path: str, content: str) -> str | None:
         return "Cannot modify npm packages directly"
 
     try:
-        full_path = os.path.join(current_project, rel_path)
+        full_path = os.path.join(app_state.current_project, rel_path)
 
         os.makedirs(full_path)
 

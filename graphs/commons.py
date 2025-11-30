@@ -1,13 +1,15 @@
 from langchain.messages import AnyMessage, ToolMessage
 from typing import Callable, Literal
 from langchain_core.tools import BaseTool
-from globals import model
+from globals import app_state
 
 
 def get_tool_llm_node(tool_map: dict[str, BaseTool]):
     def tool_llm(state: list[AnyMessage]) -> list[AnyMessage]:
         """Node that calls the LLM with tool binding"""
-        return state + [model.bind_tools(list(tool_map.values())).invoke(state)]
+        return state + [
+            app_state.model.bind_tools(list(tool_map.values())).invoke(state)
+        ]
 
     return tool_llm
 

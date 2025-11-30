@@ -2,8 +2,10 @@ from graphs import tools, commons
 from langchain.messages import AnyMessage, HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
 
+# TODO: external resources
+
 HEAL_SYSTEM_PROMPT = """
-You are an expert Next.js 14+ build-repair agent. Your job is to take a failed “npm run build” output and use your available tools to diagnose and fix the project so that the build succeeds.
+You are an expert Next.js 14+ build-repair agent. Your job is to take a failed “npm run build” output and use your available tools to diagnose and fix the project so that the build succeeds. Assume that the project has TailwindCSS and ESLint preconfigured.
 
 You have the following capabilities:
 - Create, overwrite, and modify project files.

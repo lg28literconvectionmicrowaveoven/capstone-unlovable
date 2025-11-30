@@ -2,7 +2,6 @@ import os
 import logging
 import subprocess
 import platform
-import sys
 import atexit
 import signal
 from yaspin import yaspin
@@ -28,31 +27,6 @@ atexit.register(cleanup)
 def launch_app():
     global child_proc
 
-    os_flavor = platform.system()
-    if os_flavor == "Linux":
-        launch_cmd = [
-            "env",
-            "__NV_DISABLE_EXPLICIT_SYNC=1",
-            "./tauri/src-tauri/target/release/frontend",
-        ]
-    elif os_flavor == "Windows":
-        launch_cmd = ["./tauri/src-tauri/target/release/frontend.exe"]
-    else:
-        logging.error("Unsupported OS")
-        sys.exit(1)
-
-    try:
-        child_proc = subprocess.Popen(
-            launch_cmd,
-            start_new_session=True,
-        )
-        logging.info("Tauri app launched")
-    except FileNotFoundError:
-        logging.error(f"Executable not found: {launch_cmd[0]}")
-        sys.exit(1)
-
-
-def build_app():
     if "target" not in os.listdir("./tauri/src-tauri"):
         BUILD_MSG = "Building application... (this could take a bit)"
         with yaspin(text=BUILD_MSG, color="green") as spinner:
@@ -116,3 +90,36 @@ def build_app():
                 exit(1)
 
             spinner.ok("✅️")
+
+    os_flavor = platform.system()
+    env = os.environ.copy()
+    env["__NV_DISABLE_EXPLICIT_SYNC"] = "1"
+
+    if os_flavor == "Linux":
+        launch_cmd = "./tauri/src-tauri/target/release/frontend"
+    elif os_flavor == "Windows":
+        launch_cmd = "./tauri/src-tauri/target/release/frontend.exe"
+    else:
+        logging.error("Unsupported OS")
+        exit(1)
+
+    try:
+        logging.info("Launching tauri app")
+        child_proc = subprocess.run(
+            launch_cmd,
+            start_new_session=True,
+            shell=True,
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    except subprocess.CalledProcessError as e:
+        error_msg = e.stderr or e.stdout or "Unknown error"
+        logging.error(f"Application launch failed: {error_msg}")
+        spinner.write(f"Application exited with code {e.returncode}")
+        spinner.fail("❌️")
+        exit(1)
+    except FileNotFoundError:
+        logging.error(f"Executable not found: {launch_cmd[0]}")
+        exit(1)

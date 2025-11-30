@@ -1,29 +1,18 @@
-import logging
 import uvicorn
-import signal
-import globals
-from logging.handlers import RotatingFileHandler
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from lib.landing import build_app, launch_app
-from lib.project import generate_project
+from lib.project import generate_project, project_dev_server
 from contextlib import asynccontextmanager
+from globals import app_state
+from concurrent.futures import ThreadPoolExecutor, wait
 
-logging.basicConfig(
-    handlers=[
-        RotatingFileHandler("./unlovable.log", maxBytes=100_000_000, backupCount=3),
-        logging.StreamHandler(),
-    ],
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s]: %(message)s",
-)
+thread_executor: ThreadPoolExecutor
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.info("Starting unlovable...")
-
-    launch_app()
 
     yield
 
@@ -37,23 +26,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-build_app()
-
 
 @app.post("/api/generate_project", status_code=200)
 def post_generate_project(path: str):
-    globals.current_project = path
-    generate_project()
+    global thread_executor
+
+    with app_state._lock:
+        app_state.current_project = path
+
+    wait([thread_executor.submit(generate_project)])
+    project_dev_server()
 
 
-def interrupt_handler(sig, handler):
-    logging.info("Exiting unlovable...")
-    exit(0)
-
-
-def serve():
-    signal.signal(signal.SIGINT, interrupt_handler)
-
+def serve(executor: ThreadPoolExecutor):
+    global thread_executor
+    thread_executor = executor
     uvicorn.run(
         "lib.server:app",
         host="127.0.0.1",

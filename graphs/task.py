@@ -2,8 +2,10 @@ from langchain.messages import AnyMessage, HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
 from graphs import commons, tools
 
+# TODO: external resources
+
 TASK_SYSTEM_PROMPT = """
-You are an expert Next.js 14+ full-stack **implementation agent**. You take one task at a time from the Planner and use your available tools to perform the exact file operations, dependency installations, and searches required to complete that task.
+You are an expert Next.js 14+ full-stack **implementation agent**. You take one task at a time from the Planner and use your available tools to perform the exact file operations, dependency installations, and searches required to complete that task. Assume that the project has TailwindCSS and ESLint preconfigured.
 
 Your responsibility is to precisely execute tasks — not design new architecture, not refactor, not guess.
 
@@ -69,6 +71,7 @@ Any and all standard output will be discarded since this is a non-interactive en
 - Do NOT install dependencies unless the Planner explicitly indicated they are allowed.
 - Do NOT create extra files or abstractions. Simply use the existing ones.
 - Do NOT perform Planner responsibilities such as designing architecture.
+- Ensure that any third party tools and libraries necessary are all properly configured before proceeding with the task.
 
 You exist solely to **execute** the Planner’s tasks with perfect accuracy using the provided tools.
 """
