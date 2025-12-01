@@ -1,3 +1,20 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Settings } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Code2,
@@ -9,6 +26,9 @@ import {
   X,
   Check,
   AlertCircle,
+  Brain,
+  Globe,
+  Cpu,
 } from "lucide-react";
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
@@ -23,6 +43,11 @@ export default function UnlovableLanding() {
   const [showInstructions, setShowInstructions] = useState(false);
   const [projectOpenSuccess, setProjectOpenSuccess] = useState(false);
   const [openingProject, setOpeningProject] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState("Ollama (local)");
+  const [modelString, setModelString] = useState("");
+  const [tempProvider, setTempProvider] = useState("Ollama (local)");
+  const [tempModelString, setTempModelString] = useState("");
   const [error, setError] = useState("");
 
   // TODO: fix generation hanging the UI
@@ -75,6 +100,21 @@ export default function UnlovableLanding() {
     setError("");
   }
 
+  // Add function to handle settings modal open
+  function openSettings() {
+    setTempProvider(selectedProvider);
+    setTempModelString(modelString);
+    setShowSettings(true);
+  }
+
+  // Add function to save settings
+  function saveSettings() {
+    setSelectedProvider(tempProvider);
+    setModelString(tempModelString);
+    setShowSettings(false);
+    // TODO: Send settings to backend API
+  }
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-950">
       <div className="absolute inset-0 overflow-hidden">
@@ -95,7 +135,6 @@ export default function UnlovableLanding() {
           }}
         />
       </div>
-
       <div className="relative z-10">
         <nav className="px-6 py-6">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -110,6 +149,28 @@ export default function UnlovableLanding() {
                 unlovable
               </span>
             </motion.div>
+
+            <motion.button
+              onClick={openSettings}
+              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Settings size={18} className="text-slate-400" />
+              <div className="flex flex-col items-start">
+                <span className="text-xs text-slate-400 font-sans">
+                  {selectedProvider}
+                </span>
+                {modelString && (
+                  <span className="text-xs text-slate-500 font-mono">
+                    {modelString}
+                  </span>
+                )}
+              </div>
+            </motion.button>
           </div>
         </nav>
 
@@ -160,7 +221,6 @@ export default function UnlovableLanding() {
             </button>
           </motion.div>
         </div>
-
         <div className="max-w-6xl mx-auto px-6 pb-32">
           <div className="grid md:grid-cols-3 gap-6">
             {[
@@ -206,7 +266,6 @@ export default function UnlovableLanding() {
             ))}
           </div>
         </div>
-
         <div className="max-w-4xl mx-auto px-6 pb-32">
           <motion.div
             className="rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 overflow-hidden"
@@ -238,7 +297,6 @@ export default function UnlovableLanding() {
             </div>
           </motion.div>
         </div>
-
         <footer className="border-t border-white/10 bg-white/5 backdrop-blur-md">
           <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
@@ -250,7 +308,6 @@ export default function UnlovableLanding() {
           </div>
         </footer>
       </div>
-
       <AnimatePresence>
         {showPopup && (
           <motion.div
@@ -471,6 +528,130 @@ export default function UnlovableLanding() {
           </motion.div>
         )}
       </AnimatePresence>
+      // Update the Dialog content with proper theming and animations
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent className="bg-slate-900/95 backdrop-blur-xl border-white/20 text-white max-w-md">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold font-sans flex items-center gap-2">
+                <Settings size={24} className="text-pink-400" />
+                Settings
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 font-sans">
+                Configure your model provider and settings
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 py-6">
+              <motion.div
+                className="space-y-3"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
+                <Label
+                  htmlFor="provider"
+                  className="text-white font-sans text-sm font-medium"
+                >
+                  Model Provider
+                </Label>
+                <Select value={tempProvider} onValueChange={setTempProvider}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white hover:bg-white/10 transition-all h-12">
+                    <SelectValue placeholder="Select provider" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-white/20">
+                    <SelectItem
+                      value="Ollama (local)"
+                      className="text-white hover:bg-white/10 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Cpu size={16} className="text-slate-400" />
+                        <span>Ollama (local)</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem
+                      value="Google"
+                      className="text-white hover:bg-white/10 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Globe size={16} className="text-slate-400" />
+                        <span>Google</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem
+                      value="Groq"
+                      className="text-white hover:bg-white/10 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Zap size={16} className="text-slate-400" />
+                        <span>Groq</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem
+                      value="OpenAI"
+                      className="text-white hover:bg-white/10 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Brain size={16} className="text-slate-400" />
+                        <span>OpenAI</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </motion.div>
+
+              <motion.div
+                className="space-y-3"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+              >
+                <Label
+                  htmlFor="model-string"
+                  className="text-white font-sans text-sm font-medium"
+                >
+                  Model String
+                </Label>
+                <Input
+                  id="model-string"
+                  value={tempModelString}
+                  onChange={(e) => setTempModelString(e.target.value)}
+                  placeholder="e.g., gpt-4, llama3, gemini-pro"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-pink-400/50 focus:ring-2 focus:ring-pink-400/20 transition-all h-12 font-mono"
+                />
+              </motion.div>
+
+              <motion.div
+                className="flex gap-3 pt-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.3 }}
+              >
+                <motion.button
+                  onClick={() => setShowSettings(false)}
+                  className="flex-1 py-3 px-4 rounded-lg bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 transition-all font-sans"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={saveSettings}
+                  className="flex-1 py-3 px-4 rounded-lg bg-gradient-to-r from-pink-500 to-blue-500 text-white font-semibold hover:shadow-xl hover:shadow-pink-500/50 transition-all font-sans"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Save
+                </motion.button>
+              </motion.div>
+            </div>
+          </motion.div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

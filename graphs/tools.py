@@ -131,13 +131,10 @@ def read_project_file(rel_path: str) -> str:
     """
     if rel_path == "/package.json" or rel_path == "/package-lock.json":
         return "Wrong tool"
-
     try:
-        full_path = os.path.join(app_state.current_project, rel_path)
-
+        full_path = os.path.join(app_state.current_project, rel_path.lstrip("/"))
         if not os.path.exists(full_path):
             return "File does not exist"
-
         with open(full_path, "r") as file:
             return file.read()
     except Exception as e:
@@ -152,15 +149,12 @@ def write_project_file(rel_path: str, content: str) -> str | None:
     """
     if rel_path == "/package.json" or rel_path == "/package-lock.json":
         return "Cannot modify npm packages directly"
-
     try:
-        full_path = os.path.join(app_state.current_project, rel_path)
-
-        os.makedirs(full_path)
-
+        full_path = os.path.join(app_state.current_project, rel_path.lstrip("/"))
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
         with open(full_path, "w") as file:
             file.write(content)
-
+        logging.info(f"Wrote to file: {full_path}")
         return "Write successful"
     except Exception as e:
         logging.error(f"Writing to file {full_path} failed with: {str(e)}")

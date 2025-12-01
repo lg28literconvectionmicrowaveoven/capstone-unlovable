@@ -1,48 +1,96 @@
-from langchain.messages import AnyMessage, ToolMessage
-from typing import Callable, Literal
+# graphs/commons.py — FINAL, BULLETPROOF VERSION (Dec 2025)
+from typing import Annotated, TypedDict
+from langchain_core.messages import AnyMessage, SystemMessage, ToolMessage, HumanMessage
 from langchain_core.tools import BaseTool
+from langgraph.graph import StateGraph, START
+from langgraph.prebuilt import tools_condition
+from operator import add
 from globals import app_state
 
 
-def get_tool_llm_node(tool_map: dict[str, BaseTool]):
-    def tool_llm(state: list[AnyMessage]) -> list[AnyMessage]:
-        """Node that calls the LLM with tool binding"""
-        return state + [
-            app_state.model.bind_tools(list(tool_map.values())).invoke(state)
-        ]
-
-    return tool_llm
+# This is the OFFICIAL LangGraph state schema for message graphs
+class AgentState(TypedDict):
+    messages: Annotated[list[AnyMessage], add]  # appends messages automatically
+    carry: str
 
 
-def get_tool_executor(
-    tool_map: dict[str, BaseTool],
-) -> Callable[[list[AnyMessage]], list[AnyMessage]]:
-    def tool_executor(state: list[AnyMessage]) -> list[AnyMessage]:
-        """Node that executes tools based on the last AI message"""
-        last_message = state[-1]
-        tool_messages: list[ToolMessage] = []
-        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-            for tool_call in last_message.tool_calls:
-                tool_name: str = tool_call["name"]
-                tool_args: dict = tool_call["args"]
-                tool_id: str = tool_call["id"]
-                if tool_name in tool_map:
-                    result = tool_map[tool_name].invoke(tool_args)
-                else:
-                    result = f"Unknown tool: {tool_name}"
-                tool_messages.append(
-                    ToolMessage(content=str(result), tool_call_id=tool_id)
+def build_simple_tool_graph(
+    system_prompt: str, tool_map: dict[str, BaseTool], name: str = "agent"
+):
+    """
+    Returns a compiled LangGraph agent.
+    Invoke ONLY with:
+        .invoke({"messages": [HumanMessage(content="your task here")]})
+    This is the ONLY pattern that works 100% with LangGraph 0.2+.
+
+    state["carry"] maintains a brief compounding summary of tasks performed.
+    """
+
+    def agent(state: AgentState):
+        # Ensure system prompt is always first
+        messages = state["messages"]
+        if not messages or not isinstance(messages[0], SystemMessage):
+            messages = [SystemMessage(content=system_prompt)] + messages
+        model_with_tools = app_state.model.bind_tools(list(tool_map.values()))
+        response = model_with_tools.invoke(messages)
+
+        # Generate compounding summary of what the agent just did
+        current_carry = state.get("carry", "")
+
+        # Build context for summary generation
+        latest_action = ""
+        if hasattr(response, "tool_calls") and response.tool_calls:
+            tool_names = [tc["name"] for tc in response.tool_calls]
+            latest_action = f"Called tools: {', '.join(tool_names)}"
+        elif hasattr(response, "content") and response.content:
+            latest_action = "Responded to user"
+
+        # Generate updated summary using LLM
+        if latest_action:
+            summary_prompt = f"""Previous summary: {current_carry if current_carry else "None"}
+
+Latest action: {latest_action}
+
+Generate a brief, compounding summary (max 2 sentences) of all tasks performed so far. Be concise and cumulative."""
+
+            summary_response = app_state.model.invoke(
+                [HumanMessage(content=summary_prompt)]
+            )
+            new_carry = summary_response.content.strip()
+        else:
+            new_carry = current_carry
+
+        return {"messages": [response], "carry": new_carry}
+
+    def tools(state: AgentState):
+        last_msg = state["messages"][-1]
+        if not getattr(last_msg, "tool_calls", None) or not last_msg.tool_calls:
+            return {"messages": []}
+
+        tool_messages = []
+        for tc in last_msg.tool_calls:
+            tool_name = tc["name"]
+            tool_args = tc.get("args", {})
+            tool_id = tc["id"]
+            tool = tool_map.get(tool_name)
+            try:
+                result = (
+                    tool.invoke(tool_args)
+                    if tool
+                    else f"Error: Tool '{tool_name}' not found"
                 )
-        return state + tool_messages
+            except Exception as e:
+                result = f"Tool '{tool_name}' crashed: {str(e)}"
+            tool_messages.append(ToolMessage(content=str(result), tool_call_id=tool_id))
 
-    return tool_executor
+        return {"messages": tool_messages}
 
+    # Build graph — EXACTLY as in LangGraph official docs
+    graph = StateGraph(AgentState)
+    graph.add_node("agent", agent)
+    graph.add_node("tools", tools)
+    graph.add_edge(START, "agent")
+    graph.add_conditional_edges("agent", tools_condition)  # This is safe and correct
+    graph.add_edge("tools", "agent")
 
-def tools_edge(state: list[AnyMessage]) -> Literal["tools", "continue"]:
-    """Conditional edge that determines if we should call tools or structure output"""
-    last_message = state[-1]
-
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-
-    return "continue"
+    return graph.compile()
