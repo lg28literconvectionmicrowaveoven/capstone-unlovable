@@ -4,6 +4,7 @@ from json import load as json_load
 import subprocess
 import os
 import logging
+import shutil
 
 
 @tool
@@ -159,3 +160,86 @@ def write_project_file(rel_path: str, content: str) -> str | None:
     except Exception as e:
         logging.error(f"Writing to file {full_path} failed with: {str(e)}")
         return f"Writing to file {full_path} failed with: {str(e)}"
+
+
+@tool
+def ls(rel_path: str) -> list[str]:
+    """
+    Lists files and subdirectories in a project given a relative path where / is the project root (e.g., /src, /tsconfig.json).
+    """
+    return os.listdir(os.path.join(app_state.current_project, rel_path.lstrip("/")))
+
+
+@tool
+def move(rel_path: str, dest_rel_path: str) -> str | None:
+    """
+    Moves a directory or a file into another directory given a relative path where / is the project root (e.g., /src, /tsconfig.json).
+    """
+    full_path = os.path.join(app_state.current_project, rel_path.lstrip("/"))
+
+    if not os.path.exists(full_path):
+        return "Source path is invalid"
+
+    dest_full_path = os.path.join(app_state.current_project, rel_path.lstrip("/"))
+    try:
+        if input(f"Move {full_path} to {dest_full_path} (y/n)?").lower() != "n":
+            shutil.move(full_path, dest_full_path)
+    except Exception as e:
+        return f"Move failed with: {str(e)}"
+
+
+@tool
+def type_check() -> str:
+    """
+    Runs tsc --noEmit on the current project and gives the output
+    """
+    try:
+        tsc_out = subprocess.run(
+            "tsc --noEmit",
+            capture_output=True,
+            text=True,
+            cwd=app_state.current_project,
+            shell=True,
+            check=True,
+        )
+        return tsc_out.stdout or tsc_out.stdout or "No output"
+    except subprocess.CalledProcessError as e:
+        return e.stderr or e.stdout or "Unknown error"
+
+
+@tool
+def next_lint() -> str:
+    """
+    Runs next lint on the current project and gives the output
+    """
+    try:
+        tsc_out = subprocess.run(
+            "next lint",
+            capture_output=True,
+            text=True,
+            cwd=app_state.current_project,
+            shell=True,
+            check=True,
+        )
+        return tsc_out.stdout or tsc_out.stdout or "No output"
+    except subprocess.CalledProcessError as e:
+        return e.stderr or e.stdout or "Unknown error"
+
+
+@tool
+def npx_run(command: str, args: list[str]) -> str:
+    """
+    Runs npx <command> <args> on the current project and gives the output
+    """
+    try:
+        tsc_out = subprocess.run(
+            f"npx {command} {' '.join(args)}",
+            capture_output=True,
+            text=True,
+            cwd=app_state.current_project,
+            shell=True,
+            check=True,
+        )
+        return tsc_out.stdout or tsc_out.stdout or "No output"
+    except subprocess.CalledProcessError as e:
+        return e.stderr or e.stdout or "Unknown error"

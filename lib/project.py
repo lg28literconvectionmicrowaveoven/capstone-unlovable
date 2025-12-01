@@ -87,52 +87,66 @@ def generate_project():
             logging.error(f"Unexpected error during project creation: {e}")
             return f"Unexpected error: {e}"
 
-    try:
-        plan: Plan = planner.invoke({})
+    summary: str = ""
+    with yaspin(color="yellow", text="Generating site...") as spinner:
+        spinner.write("Drafting plan...")
+        try:
+            plan: Plan = planner.invoke({})
+            print()
+            print(plan)
+            print()
+        except Exception as e:
+            logging.error(f"Planner failed with: {str(e)}")
+            spinner.fail("❌")
+            raise RuntimeError("Planner failed")
 
-        print()
-        print(plan)
-        print()
+        spinner.write("Executing tasks...")
+        try:
+            for common_task in plan.common_tasks:
+                summary = task.invoke(
+                    {"messages": [HumanMessage(common_task)], "carry": summary}
+                )["carry"]
+            for backend_task in plan.backend_tasks:
+                summary = task.invoke(
+                    {"messages": [HumanMessage(backend_task)], "carry": summary}
+                )["carry"]
+            for frontend_task in plan.frontend_tasks:
+                summary = task.invoke(
+                    {"messages": [HumanMessage(frontend_task)], "carry": summary}
+                )["carry"]
+        except Exception as e:
+            logging.error(f"Task failed with: {str(e)}")
+            spinner.fail("❌")
+            raise RuntimeError("Task failed")
 
-        for common_task in plan.common_tasks:
-            task.invoke({"messages": [HumanMessage(common_task)]})
-            # task.invoke(common_task)
-        for backend_task in plan.backend_tasks:
-            task.invoke({"messages": [HumanMessage(backend_task)]})
-            # task.invoke(backend_task)
-        for frontend_task in plan.frontend_tasks:
-            task.invoke({"messages": [HumanMessage(frontend_task)]})
-            # task.invoke(frontend_task)
-
-        with yaspin(color="red", text="Testing build...") as spinner:
-            tries = 3
-            build_fail = True
-            while tries > 0 and build_fail:
-                try:
-                    subprocess.run(
-                        "npm run build",
-                        capture_output=True,
-                        text=True,
-                        cwd=app_state.current_project,
-                        shell=True,
-                        check=True,
-                    )
-                    build_fail = False
-                except subprocess.CalledProcessError as e:
-                    build_fail = True
-                    error_msg = e.stderr or e.stdout or "Unknown error"
-                    spinner.write("Test build failed.")
-                    spinner.write("Trying to fix the bug.")
-                    healer.invoke({"messages": [HumanMessage(error_msg)]})
-                    # healer.invoke(error_msg)
-                    tries -= 1
-                    spinner.write(f"Retrying build, {tries} tries left.")
-
-            if build_fail:
-                spinner.write("Could not produce working build.")
-                raise RuntimeError("Could not produce working build.")
-    except Exception as e:
-        print(str(e))
+    # with yaspin(color="red", text="Testing build...") as spinner:
+    #     tries = 3
+    #     build_fail = True
+    #     while tries > 0 and build_fail:
+    #         try:
+    #             subprocess.run(
+    #                 "npm run build",
+    #                 capture_output=True,
+    #                 text=True,
+    #                 cwd=app_state.current_project,
+    #                 shell=True,
+    #                 check=True,
+    #             )
+    #             build_fail = False
+    #         except subprocess.CalledProcessError as e:
+    #             build_fail = True
+    #             error_msg = e.stderr or e.stdout or "Unknown error"
+    #             spinner.write("Test build failed.")
+    #             spinner.write("Trying to fix the bug.")
+    #             summary = healer.invoke(
+    #                 {"messages": [HumanMessage(error_msg)], "carry": summary}
+    #             )["carry"]
+    #             # healer.invoke(error_msg)
+    #             tries -= 1
+    #             spinner.write(f"Retrying build, {tries} tries left.")
+    #     if build_fail:
+    #         spinner.write("Could not produce working build.")
+    #         raise RuntimeError("Could not produce working build.")
 
 
 def project_dev_server():

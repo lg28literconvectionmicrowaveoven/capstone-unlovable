@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGINT, interrupt_handler)
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         server_future = executor.submit(serve, executor)
         executor.submit(launch_app)
 

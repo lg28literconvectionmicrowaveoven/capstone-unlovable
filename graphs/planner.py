@@ -7,117 +7,97 @@ from typing import TypedDict, Literal, Annotated
 from operator import add
 from langchain_core.runnables import RunnableLambda
 import os
+import logging
 
-# TODO: fix prompt
 PLANNER_SYSTEM_MESSAGE = """
-You are the PLANNER agent in a multi-agent system.
-Your responsibility is to transform a sequence of route prompts into a complete, logically ordered development plan for a Next.js application.
-## PROJECT CONTEXT
-All work will be executed inside a Next.js project that is already set up with:
-- TypeScript
-- TailwindCSS
-- ESLint configured for modern best practices
-- The App Router (`app/` directory) following the latest Next.js standards
-The planner DOES NOT write code.
-The planner ONLY produces tasks.
-Implementation agents will execute these tasks in order.
-## INPUT
-You will receive multiple prompts describing:
-- Pages, routes, and their UI/UX behavior
-- Shared or local components
-- State handling, context, hooks, and utilities
-- API routes, server actions, or backend logic
-- Data needs and interactions between frontend and backend
-- Any required integrations (auth, payments, persistence)
-## OUTPUT STRUCTURE
-Your output must consist of **three main categories**, each containing a strictly ordered list of tasks.
-These tasks will be executed sequentially in the order given.
----
-# 1. **Common Tasks**
-A sequential list of tasks for everything used across multiple parts of the app, including:
-- Shared UI components (e.g., Navbar, Footer, Buttons)
-- Reusable component primitives (Card, Badge, Skeleton, etc.)
-- Layouts and sub-layouts using `app/layout.tsx`
-- Global context providers and client-side state where necessary
-- Hooks, utilities, validators, schemas, formatter modules
-- Theme configuration or TailwindCSS customizations
-- Any fundamental building block required before backend or frontend work
-These tasks must follow:
-- Component-driven development principles
-- Modern React best practices
-- Server Components by default, unless client interactivity is required
-- Well-organized folder structure (`components/`, `lib/`, `hooks/`, etc.)
-Common tasks must appear **before any backend or frontend tasks that depend on them**.
----
-# 2. **Backend Tasks**
-A sequential list of tasks covering all backend logic, including:
-- Next.js App Router API routes (`app/api/.../route.ts`)
-- Server Actions using modern `export async function actionName()` patterns
-- Data access layers (repositories/services) following separation of concerns
-- Schema definitions for validation (e.g., Zod)
-- Integration with external services (Auth, DB, Supabase, Stripe, etc.)
-- Error handling and input validation aligned with modern guidelines
-- Any infrastructure-like utilities needed for data fetching
-Backend tasks must follow modern standards:
-- Use Server Actions when appropriate instead of API routes for form submission
-- Follow Next.js recommended conventions for edge runtime, caching, revalidation
-- Explicit typing with TypeScript interfaces and type inference
-- Treat backend logic as layered and testable
-Backend tasks must appear **after all Common Tasks they rely on** but **before any Frontend Tasks** that use backend output.
----
-# 3. **Frontend Tasks**
-A sequential list of tasks covering all UI implementation, including:
-- Pages under `app/.../page.tsx`
-- Route structure, layouts, and segment routing
-- Data fetching using Server Components (`async` components)
-- Interactive components requiring `"use client"`
-- Form UIs, modals, sheets, navigation, and user flows
-- Composition using previously defined Common and Backend tasks
-Frontend tasks must follow modern Next.js best practices:
-- Use Server Components by default for rendering and data fetching
-- Use Client Components only when interactivity or browser APIs are required
-- Ensure all UI is accessible, responsive via TailwindCSS, and componentized
-- Leverage Suspense, Streaming, and async/await patterns where beneficial
-- Avoid prop drilling by using context providers defined in Common Tasks
-Frontend tasks must appear **after all Common and Backend tasks they depend on**.
----
-## GENERAL PLANNING RULES
-### Modern Programming Guidelines
-You must ensure:
-- Separation of concerns:
-  - UI components do not handle data-access logic
-  - Backend logic is isolated into reusable modules
-- Strong TypeScript typing throughout
-- Predictable and consistent folder structure
-- Clear dependency sequencing
-### Next.js Standards You Must Follow
-- Use App Router conventions (`app/` directory)
-- Prefer Server Components and Server Actions
-- Use `fetch()` with Next.js caching/revalidation rules
-- Keep client components lightweight and minimal
-- Avoid global state unless absolutely necessary
-- Co-locate components and logic when it improves clarity
-### Completeness
-You must convert **every described feature** into one or more tasks.
-If a requirement implicitly depends on something (e.g., a validation schema, helper, layout), you must create tasks for it.
-If the requirements does not explicitly require advanced functionality, assume a basic static approach for it.
----
-## GOAL
-Produce a complete, dependency-aware roadmap that ensures implementation agents can build the entire application from start to finish—using modern programming best practices and the latest Next.js standards.
-"""
+You are an expert Next.js 14+ architect working on an already existing project that was created with:
+- `create-next-app@latest --typescript --tailwind --eslint --app --src-dir --ts`
+- App Router (not pages/)
+- Full TypeScript strict mode
+- TailwindCSS v3+ with default config
+- ESLint with @next/eslint-plugin-next and next/core-web-vitals rules
+- Standard src/ directory structure
+
+Your job is to receive high-level feature/page requests and output a complete, ordered, atomic task plan that extends this exact project without ever breaking or overwriting its existing configuration.
+
+Always assume the following files already exist and must never be deleted or fully replaced unless explicitly required:
+- next.config.js (or .mjs)
+- tailwind.config.ts
+- postcss.config.js
+- tsconfig.json (with strict: true, paths, etc.)
+- eslint.config.js or .eslintrc.js
+- src/app/layout.tsx
+- src/app/globals.css (with @tailwind directives)
+- src/app/page.tsx
+
+When planning:
+- Use the existing Tailwind config — never suggest replacing it unless adding new plugins explicitly requested.
+- Use the existing tsconfig.json paths and settings — extend them only if needed.
+- Use the existing layout.tsx as the root layout — wrap or extend it, never replace it wholesale.
+- Use app/ directory for all new routes (never create pages/ directory).
+- Prefer parallel routes, intercepting routes, and loading/error.tsx conventions when appropriate.
+- Always use server components by default unless client-side interactivity is required.
+- Use `use client` only when necessary and justify it in the task.
+- All new components go under src/components/ unless they are route-specific (then src/app/.../components/).
+- All new utilities/lib go under src/lib/ or src/utils/.
+- All new types/interfaces go under src/types/.
+
+Every task must be minimal, reversible, and keep the project importable, type-checkable, and lint-clean at every single step.
+Never assume the Executor will "clean up later" — your plan must be perfect from step 1.
+
+Output only the exhaustive, numbered task list with exact file paths and precise instructions. Ask clarifying questions if the request is ambiguous. Otherwise deliver the full plan in one go."""
 
 TOOLS_MAP = {"search_internet": search_internet}
 
 
 class Plan(BaseModel):
     common_tasks: list[str] = Field(
-        description="One single string per task. Only the task description, nothing else. No 'name:', no 'description:' prefixes."
+        description="""
+        Atomic, ordered tasks that affect shared configuration or global files and must be done first 
+        so that every subsequent task can succeed without breaking the build at any point.
+        Examples:
+        - Add necessary dependencies to package.json (e.g., zod, react-hook-form, @tanstack/react-query)
+        - Add or extend environment variables in .env.example and tsconfig.json paths
+        - Extend tailwind.config.ts with new plugins, themes, or content paths
+        - Update next.config.js (images, redirects, headers, experimental flags)
+        - Add global providers or context in src/app/layout.tsx or src/providers/
+        - Create shared types in src/types/
+        - Create reusable utilities in src/lib/ or src/utils/
+        - Configure middleware.ts, route handlers, or API routes that other tasks depend on
+        These tasks are executed exactly once at the beginning and never touch page-specific UI.
+        Remember that the project has already been created, bootstrapped with TailwindCSS, ESLint, and TypeScript, and that you are already in the project directory, so do not add project creation to the list of tasks.
+        """
     )
+
     backend_tasks: list[str] = Field(
-        description="One single string per task. Only the task description, nothing else."
+        description="""
+        Pure backend / data-layer tasks that do not affect visible UI directly.
+        Must use app router conventions (route.ts, server actions, server components).
+        Examples:
+        - Create src/app/api/auth/[...nextauth]/route.ts with NextAuth.js
+        - Create src/app/api/trpc/[trpc]/route.ts and initialize tRPC
+        - Create server-only utilities in src/server/
+        - Implement database seeding script in src/lib/seed.ts
+        - Add rate-limiting middleware or edge functions
+        - Create server actions in src/actions/
+        These tasks may create or modify files under src/app/api/, src/server/, src/lib/, 
+        but never add 'use client' or UI components.
+        """
     )
+
     frontend_tasks: list[str] = Field(
-        description="One single string per task. Only the task description, nothing else."
+        description="""
+        Purely frontend / route-specific UI tasks that implement pages, layouts, and client components.
+        Executed only after all common_tasks and backend_tasks are complete.
+        Must follow exact file locations:
+        - New pages → src/app/[route]/page.tsx (server component by default)
+        - Client components → src/components/ or src/app/[route]/components/ with 'use client'
+        - Route groups → src/app/(group)/...
+        - loading.tsx, error.tsx, layout.tsx inside route segments when needed
+        Examples:
+        These tasks are allowed to use 'use client', hooks, and Tailwind, but must never 
+        modify global config files or add dependencies.
+        """
     )
 
     class Config:
@@ -162,8 +142,7 @@ def read_prompts_node(state: PlannerState) -> dict:
                                 HumanMessage(content=f"{relative_path}: -\n\n{content}")
                             )
         except Exception as e:
-            # Graceful fallback if directory issues
-            pass
+            logging.error(f"Error while reading prompts: {str(e)}")
 
     recursive_read_prompts(f"{app_state.current_project}/prompts/")
     return {"messages": messages}
@@ -204,14 +183,9 @@ def finalize_plan_node(state: PlannerState) -> dict:
     final_messages = state["messages"] + [
         HumanMessage(
             content=(
-                "OUTPUT EXACTLY THIS JSON (no explanations, no markdown, no extra fields):\n"
-                "{\n"
-                ' "common_tasks": ["First task only", "Second task only", "..."],\n'
-                ' "backend_tasks": ["...", "..."],\n'
-                ' "frontend_tasks": ["...", "..."]\n'
-                "}\n"
+                "OUTPUT EXACTLY AS PER THE SCHEMA\n"
                 "Each entry must be a single short sentence describing WHAT to do. "
-                "Do NOT include prefixes like 'description:', 'name:', file paths, or bullet points."
+                "Do NOT include prefixes like 'description:', 'name:'"
             )
         )
     ]
