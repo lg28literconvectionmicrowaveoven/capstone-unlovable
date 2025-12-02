@@ -30,9 +30,6 @@ def launch_app():
     if "target" not in os.listdir("./tauri/src-tauri"):
         BUILD_MSG = "Building application... (this could take a bit)"
         with yaspin(text=BUILD_MSG, color="green") as spinner:
-            logging.info(BUILD_MSG)
-
-            logging.info("Installing dependencies...")
             spinner.write("> npm i")
             try:
                 subprocess.run(
@@ -52,7 +49,6 @@ def launch_app():
                 spinner.fail("❌️")
                 exit(1)
 
-            logging.info("Installing dev dependencies...")
             spinner.write("> npm i -D")
             try:
                 subprocess.run(

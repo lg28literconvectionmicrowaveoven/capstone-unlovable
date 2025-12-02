@@ -1,5 +1,6 @@
 import uvicorn
 import logging
+import os
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette import status
@@ -82,8 +83,16 @@ def post_switch_model(model: Model):
 
 @app.post("/api/quit")
 def post_quit():
+    global thread_executor
+
+    print()
     logging.info("Exiting unlovable...")
-    exit(0)
+
+    def quit():
+        os._exit(0)
+
+    return Response(status_code=status.HTTP_200_OK)
+    thread_executor.submit(quit)
 
 
 def serve(executor: ThreadPoolExecutor):

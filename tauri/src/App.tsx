@@ -53,27 +53,6 @@ export default function UnlovableLanding() {
   const [settingsError, setSettingsError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  async function onSettingsLoaded(provider: string, model: string) {
-    const response = await fetch("http://localhost:8000/api/switch_models", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        provider: provider,
-        model_string: model,
-      }),
-    });
-
-    if (response.ok) {
-      setSelectedProvider(tempProvider);
-      setModelString(tempModelString);
-      setShowSettings(false);
-    } else {
-      setSettingsError(await response.text());
-    }
-  }
-
   useEffect(() => {
     async function loadSettings() {
       setIsLoading(true);
@@ -81,35 +60,51 @@ export default function UnlovableLanding() {
         const store = await Store.load("settings.json");
         const provider = await store.get<string>("provider");
         const model = await store.get<string>("modelString");
+
         if (provider) {
           setSelectedProvider(provider);
         }
         if (model) {
           setModelString(model);
         }
-        await onSettingsLoaded(provider || "Ollama", model || "");
+
+        // Call the API directly here instead of using onSettingsLoaded
+        const response = await fetch(
+          "http://localhost:8000/api/switch_models",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              provider: provider || "Ollama",
+              model_string: model || "",
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          console.error("Failed to load settings:", await response.text());
+        }
       } catch (err) {
         console.error("Error loading settings:", err);
       } finally {
         setIsLoading(false);
       }
     }
+
     loadSettings();
 
     const currentWindow = getCurrentWindow();
-
     const unlisten = currentWindow.onCloseRequested(async (event) => {
       event.preventDefault();
-
       if (!projectOpenSuccess)
         await fetch("http://localhost:8000/api/quit", {
           method: "POST",
         });
-
-    // Also catch Tauri's close request as backup (in case beforeunload is blocked)
-    const unlisten = getCurrentWindow().onCloseRequested(() => {
-      if (projectOpenSuccess) return;
-
+      try {
+        const store = await Store.load("settings.json");
+        await store.save();
         await currentWindow.close();
       } catch (err) {
         console.error("Error on close:", err);
@@ -120,7 +115,7 @@ export default function UnlovableLanding() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [onSettingsLoaded]);
+  }, []);
 
   async function handleOpenButton() {
     try {
