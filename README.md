@@ -1,7 +1,7 @@
 # Requirements
 
 1. `uv` (to set up and run the project)
-2. `.env` with a Serper API Key and other Model Keys
+2. `.env` with a Serper API Key and other Model Keys (Groq and OpenAI are supported)
 3. `npm`/`npx` (for website creation, building the Tauri application)
 4. Rust/Cargo (for building the Tauri application)
 
