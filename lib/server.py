@@ -43,6 +43,7 @@ def post_generate_project(path: str):
     try:
         generate_project()
     except RuntimeError as e:
+        thread_executor.submit(revert_project)
         return Response(
             content=f"Project generation failed with: {str(e)}",
             status_code=status.HTTP_400_BAD_REQUEST,
