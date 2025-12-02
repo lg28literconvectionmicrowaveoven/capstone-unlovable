@@ -38,7 +38,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Store } from "@tauri-apps/plugin-store";
 import "./App.css";
 
-// TODO: on close handler to quit main thread when generation hasn't completed yet
+// TODO: wait VERY LONG for generation
+// TODO: handle manual application quit too?
 export default function UnlovableLanding() {
   const [showPopup, setShowPopup] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
@@ -68,20 +69,16 @@ export default function UnlovableLanding() {
           setModelString(model);
         }
 
-        // Call the API directly here instead of using onSettingsLoaded
-        const response = await fetch(
-          "http://localhost:8000/api/switch_models",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              provider: provider || "Ollama",
-              model_string: model || "",
-            }),
+        const response = await fetch("http://localhost:8000/api/switch_model", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            provider: provider || "Ollama",
+            model_string: model || "",
+          }),
+        });
 
         if (!response.ok) {
           console.error("Failed to load settings:", await response.text());
@@ -118,6 +115,7 @@ export default function UnlovableLanding() {
   }, []);
 
   async function handleOpenButton() {
+    setError("");
     try {
       const dir = await dirOpen({
         directory: true,
@@ -127,6 +125,8 @@ export default function UnlovableLanding() {
       if (!dir) {
         return;
       }
+
+      setProjectOpenSuccess(false);
 
       setError("");
       setOpeningProject(true);
@@ -172,7 +172,7 @@ export default function UnlovableLanding() {
   }
 
   async function saveSettings() {
-    const response = await fetch("http://localhost:8000/api/switch_models", {
+    const response = await fetch("http://localhost:8000/api/switch_model", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
