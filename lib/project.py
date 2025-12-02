@@ -11,7 +11,6 @@ from langchain.messages import HumanMessage
 
 
 # TODO: generate a README using the planner's output
-# TODO: properly handle project generation failure/error
 def generate_project():
     logging.info(f"Opening project {app_state.current_project}")
 
@@ -92,9 +91,6 @@ def generate_project():
         spinner.write("Drafting plan...")
         try:
             plan: Plan = planner.invoke({})
-            print()
-            print(plan)
-            print()
         except Exception as e:
             logging.error(f"Planner failed with: {str(e)}")
             spinner.fail("❌")
@@ -114,39 +110,99 @@ def generate_project():
                 summary = task.invoke(
                     {"messages": [HumanMessage(frontend_task)], "carry": summary}
                 )["carry"]
+            spinner.ok("✅")
         except Exception as e:
             logging.error(f"Task failed with: {str(e)}")
             spinner.fail("❌")
             raise RuntimeError("Task failed")
 
-    # with yaspin(color="red", text="Testing build...") as spinner:
-    #     tries = 3
-    #     build_fail = True
-    #     while tries > 0 and build_fail:
-    #         try:
-    #             subprocess.run(
-    #                 "npm run build",
-    #                 capture_output=True,
-    #                 text=True,
-    #                 cwd=app_state.current_project,
-    #                 shell=True,
-    #                 check=True,
-    #             )
-    #             build_fail = False
-    #         except subprocess.CalledProcessError as e:
-    #             build_fail = True
-    #             error_msg = e.stderr or e.stdout or "Unknown error"
-    #             spinner.write("Test build failed.")
-    #             spinner.write("Trying to fix the bug.")
-    #             summary = healer.invoke(
-    #                 {"messages": [HumanMessage(error_msg)], "carry": summary}
-    #             )["carry"]
-    #             # healer.invoke(error_msg)
-    #             tries -= 1
-    #             spinner.write(f"Retrying build, {tries} tries left.")
-    #     if build_fail:
-    #         spinner.write("Could not produce working build.")
-    #         raise RuntimeError("Could not produce working build.")
+    with yaspin(color="red", text="Testing build...") as spinner:
+        max_tries = 3
+        tries = 0
+
+        while tries < max_tries:
+            try:
+                subprocess.run(
+                    "npm run build",
+                    capture_output=True,
+                    text=True,
+                    cwd=app_state.current_project,
+                    shell=True,
+                    check=True,
+                )
+                spinner.ok("✅")
+                logging.info("Build succeeded")
+                return summary
+
+            except subprocess.CalledProcessError as e:
+                tries += 1
+                error_msg = e.stderr or e.stdout or "Unknown error"
+
+                spinner.write(f"Build failed (attempt {tries}/{max_tries})")
+                logging.error(f"Build error: {error_msg}")
+
+                if tries >= max_tries:
+                    spinner.fail("❌")
+                    logging.error("Could not produce working build after all retries")
+                    raise RuntimeError(
+                        f"Could not produce working build after {max_tries} attempts. Last error: {error_msg}"
+                    )
+
+                spinner.write("Analyzing build errors and applying fixes...")
+                try:
+                    heal_result = healer.invoke(
+                        {
+                            "messages": [
+                                HumanMessage(
+                                    f"Build failed with the following error. Analyze the error, identify the problematic files, and fix them:\n\n{error_msg}\n\nPrevious summary: {summary}"
+                                )
+                            ],
+                            "carry": summary,
+                            "project_path": app_state.current_project,
+                        }
+                    )
+
+                    summary = heal_result.get("carry", summary)
+
+                    spinner.write(
+                        f"Applied fixes. Retrying build ({max_tries - tries} attempts remaining)..."
+                    )
+
+                except Exception as heal_error:
+                    logging.error(f"Healer failed: {str(heal_error)}")
+                    spinner.write(
+                        f"Warning: Auto-fix attempt failed: {str(heal_error)}"
+                    )
+
+        spinner.fail("❌")
+        raise RuntimeError("Build healing loop exited unexpectedly")
+
+
+def revert_project():
+    logging.info(f"Reverting project {app_state.current_project} to original state...")
+    try:
+        for item in os.listdir(app_state.current_project):
+            if not item == "prompts":
+                path = f"{app_state.current_project}/{item}"
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
+
+        for item in os.listdir(f"{app_state.current_project}/prompts"):
+            shutil.move(
+                f"{app_state.current_project}/prompts/{item}",
+                f"{app_state.current_project}",
+            )
+    except FileNotFoundError as e:
+        logging.error(f"Project directory not found: {e}")
+        return f"Project directory not found: {e}"
+    except PermissionError as e:
+        logging.error(f"Permission denied: {e}")
+        return f"Permission denied: {e}"
+    except Exception as e:
+        logging.error(f"Unexpected error during project revert: {e}")
+        return f"Unexpected error: {e}"
 
 
 def project_dev_server():

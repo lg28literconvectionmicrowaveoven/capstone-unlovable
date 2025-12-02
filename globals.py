@@ -25,8 +25,7 @@ class GlobalState:
         self._lock = Lock()
         self.current_project: str = ""
 
-        # self.model = ChatOllama(model="qwen3:30b", temperature=0)
-        self.model = ChatOllama(model="gpt-oss:20b", temperature=0)
+        self.model = ChatOllama(model="llama3.1:8b", temperature=0)
         self.serper = GoogleSerperAPIWrapper()
 
 

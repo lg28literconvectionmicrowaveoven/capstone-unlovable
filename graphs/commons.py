@@ -1,4 +1,3 @@
-# graphs/commons.py — FINAL, BULLETPROOF VERSION (Dec 2025)
 from typing import Annotated, TypedDict
 from langchain_core.messages import AnyMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
@@ -8,9 +7,8 @@ from operator import add
 from globals import app_state
 
 
-# This is the OFFICIAL LangGraph state schema for message graphs
 class AgentState(TypedDict):
-    messages: Annotated[list[AnyMessage], add]  # appends messages automatically
+    messages: Annotated[list[AnyMessage], add]
     carry: str
 
 
@@ -27,7 +25,6 @@ def build_simple_tool_graph(
     """
 
     def agent(state: AgentState):
-        # Ensure system prompt is always first
         messages = state["messages"]
         if not messages or not isinstance(messages[0], SystemMessage):
             messages = [SystemMessage(content=system_prompt)] + messages
@@ -59,12 +56,11 @@ def build_simple_tool_graph(
 
         return {"messages": tool_messages}
 
-    # Build graph — EXACTLY as in LangGraph official docs
     graph = StateGraph(AgentState)
     graph.add_node("agent", agent)
     graph.add_node("tools", tools)
     graph.add_edge(START, "agent")
-    graph.add_conditional_edges("agent", tools_condition)  # This is safe and correct
+    graph.add_conditional_edges("agent", tools_condition)
     graph.add_edge("tools", "agent")
 
     return graph.compile()

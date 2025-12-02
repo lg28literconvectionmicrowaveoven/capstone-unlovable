@@ -45,7 +45,8 @@ When planning:
 Every task must be minimal, reversible, and keep the project importable, type-checkable, and lint-clean at every single step.
 Never assume the Executor will "clean up later" — your plan must be perfect from step 1.
 
-Output only the exhaustive, numbered task list with exact file paths and precise instructions. Ask clarifying questions if the request is ambiguous. Otherwise deliver the full plan in one go."""
+Output only the exhaustive, numbered task list with exact file paths and precise instructions. Ask clarifying questions if the request is ambiguous. Otherwise deliver the full plan in one go.
+"""
 
 TOOLS_MAP = {"search_internet": search_internet}
 
@@ -66,6 +67,7 @@ class Plan(BaseModel):
         - Configure middleware.ts, route handlers, or API routes that other tasks depend on
         These tasks are executed exactly once at the beginning and never touch page-specific UI.
         Remember that the project has already been created, bootstrapped with TailwindCSS, ESLint, and TypeScript, and that you are already in the project directory, so do not add project creation to the list of tasks.
+        Remember to give the site a proper title for each route.
         """
     )
 
@@ -135,9 +137,16 @@ def read_prompts_node(state: PlannerState) -> dict:
                             relative_path = os.path.relpath(
                                 full_path, f"{app_state.current_project}/prompts"
                             ).replace(os.sep, "/")
-                            relative_path = (
-                                "/" + relative_path if relative_path != "." else "/"
-                            )
+                            if relative_path.endswith("/index.txt"):
+                                relative_path = relative_path[:-10]
+                            elif relative_path == "index.txt":
+                                relative_path = "/"
+                            else:
+                                relative_path = "/" + relative_path
+
+                            if not relative_path.startswith("/"):
+                                relative_path = "/" + relative_path
+
                             messages.append(
                                 HumanMessage(content=f"{relative_path}: -\n\n{content}")
                             )
@@ -145,6 +154,7 @@ def read_prompts_node(state: PlannerState) -> dict:
             logging.error(f"Error while reading prompts: {str(e)}")
 
     recursive_read_prompts(f"{app_state.current_project}/prompts/")
+
     return {"messages": messages}
 
 
@@ -200,7 +210,6 @@ def should_call_tools(state: PlannerState) -> Literal["tools", "continue"]:
     return "tools" if tc and len(tc) > 0 else "continue"
 
 
-# Build the graph
 workflow = StateGraph(state_schema=PlannerState)
 workflow.add_node("read_prompts", read_prompts_node)
 workflow.add_node("planner", planner_node)
@@ -219,7 +228,6 @@ workflow.add_edge("finalize_plan", END)
 
 planner_graph = workflow.compile()
 
-# Wrapper for easy invocation (no input needed, reads from files)
 planner = RunnableLambda(
     lambda input_dict: planner_graph.invoke({"messages": [], "plan": None})["plan"]
 ).with_types(input_type=dict, output_type=Plan)
