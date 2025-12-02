@@ -94,7 +94,7 @@ def launch_app():
     if os_flavor == "Linux":
         launch_cmd = "./tauri/src-tauri/target/release/frontend"
     elif os_flavor == "Windows":
-        launch_cmd = "./tauri/src-tauri/target/release/frontend.exe"
+        launch_cmd = ".\\tauri\\src-tauri\\target\\release\\frontend.exe"
     else:
         logging.error("Unsupported OS")
         exit(1)
