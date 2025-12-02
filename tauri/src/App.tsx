@@ -39,7 +39,6 @@ import { Store } from "@tauri-apps/plugin-store";
 import "./App.css";
 
 // TODO: wait VERY LONG for generation
-// TODO: handle manual application quit too?
 export default function UnlovableLanding() {
   const [showPopup, setShowPopup] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
@@ -104,18 +103,20 @@ export default function UnlovableLanding() {
 
     const unlisten = getCurrentWindow().onCloseRequested(() => {
       if (projectOpenSuccess) return;
-
       fetch("http://localhost:8000/api/quit", { method: "POST" }).catch(
         () => {},
       );
     });
 
     return () => {
-      unlisten.then((fn) => fn());
+      window.removeEventListener("beforeunload", cleanup);
+      unlisten.then((f) => f?.()).catch(() => {});
     };
   }, [projectOpenSuccess]);
   async function handleOpenButton() {
     setError("");
+    setProjectOpenSuccess(false);
+
     try {
       const dir = await dirOpen({
         directory: true,
@@ -126,9 +127,6 @@ export default function UnlovableLanding() {
         return;
       }
 
-      setProjectOpenSuccess(false);
-
-      setError("");
       setOpeningProject(true);
 
       const response = await fetch(
@@ -138,18 +136,21 @@ export default function UnlovableLanding() {
         },
       );
 
-      setOpeningProject(false);
-
       if (response.ok) {
         setProjectOpenSuccess(true);
+        setOpeningProject(false);
         await new Promise((resolve) => setTimeout(resolve, 500));
         await open("http://localhost:3000");
         await getCurrentWindow().close();
       } else {
-        setError(await response.text());
+        const errorText = await response.text();
+        setError(errorText || "Failed to generate project. Please try again.");
+        setOpeningProject(false);
+        setProjectOpenSuccess(false);
       }
     } catch (err) {
       setOpeningProject(false);
+      setProjectOpenSuccess(false);
       setError("An error occurred. Please try again.");
       console.error("Error opening project:", err);
     }
@@ -163,40 +164,53 @@ export default function UnlovableLanding() {
     setShowPopup(false);
     setShowInstructions(false);
     setError("");
+    setProjectOpenSuccess(false);
+    setOpeningProject(false);
   }
 
   function openSettings() {
     setTempProvider(selectedProvider);
     setTempModelString(modelString);
+    setSettingsError("");
     setShowSettings(true);
   }
 
   async function saveSettings() {
-    const response = await fetch("http://localhost:8000/api/switch_model", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        provider: tempProvider,
-        model_string: tempModelString,
-      }),
-    });
+    setSettingsError("");
 
-    if (response.ok) {
-      setSelectedProvider(tempProvider);
-      setModelString(tempModelString);
-      setShowSettings(false);
+    try {
+      const response = await fetch("http://localhost:8000/api/switch_model", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          provider: tempProvider,
+          model_string: tempModelString,
+        }),
+      });
 
-      const store = await Store.load("settings.json");
-      await store.set("provider", tempProvider);
-      await store.set("modelString", tempModelString);
-      await store.save();
-    } else {
-      setSettingsError(await response.text());
+      if (response.ok) {
+        setSelectedProvider(tempProvider);
+        setModelString(tempModelString);
+        setShowSettings(false);
+        setSettingsError("");
+
+        const store = await Store.load("settings.json");
+        await store.set("provider", tempProvider);
+        await store.set("modelString", tempModelString);
+        await store.save();
+      } else {
+        const errorText = await response.text();
+        setSettingsError(
+          errorText || "Failed to save settings. Please try again.",
+        );
+      }
+    } catch (err) {
+      setSettingsError("An error occurred while saving settings.");
+      console.error("Error saving settings:", err);
     }
   }
-
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-950">
       {isLoading ? (
@@ -741,7 +755,7 @@ export default function UnlovableLanding() {
                     </motion.button>
                     <motion.button
                       onClick={saveSettings}
-                      className="flex-1 py-3 px-4 rounded-lg bg-gradient-to-r from-pink-500 to-blue-500 text-white font-semibold hover:shadow-xl hover:shadow-pink-500/50 transition-all font-sans"
+                      className="flex-1 py-3 px-4 rounded-lg bg-linear-to-r from-pink-500 to-blue-500 text-white font-semibold hover:shadow-xl hover:shadow-pink-500/50 transition-all font-sans"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >

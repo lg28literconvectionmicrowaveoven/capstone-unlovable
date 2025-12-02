@@ -154,11 +154,10 @@ def generate_project():
                         {
                             "messages": [
                                 HumanMessage(
-                                    f"Build failed with the following error. Analyze the error, identify the problematic files, and fix them:\n\n{error_msg}\n\nPrevious summary: {summary}"
+                                    f"Build failed with the following error. Analyze the error, identify the problematic files, and fix them:\n\n{error_msg}"
                                 )
                             ],
                             "carry": summary,
-                            "project_path": app_state.current_project,
                         }
                     )
 
@@ -194,6 +193,8 @@ def revert_project():
                 f"{app_state.current_project}/prompts/{item}",
                 f"{app_state.current_project}",
             )
+
+        os.rmdir(f"{app_state.current_project}/prompts")
     except FileNotFoundError as e:
         logging.error(f"Project directory not found: {e}")
         return f"Project directory not found: {e}"

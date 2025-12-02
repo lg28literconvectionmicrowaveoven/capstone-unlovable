@@ -19,7 +19,6 @@ def build_simple_tool_graph(
     Returns a compiled LangGraph agent.
     Invoke ONLY with:
         .invoke({"messages": [HumanMessage(content="your task here")]})
-    This is the ONLY pattern that works 100% with LangGraph 0.2+.
 
     state["carry"] maintains a brief compounding summary of tasks performed.
     """
