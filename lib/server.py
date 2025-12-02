@@ -1,11 +1,16 @@
 import uvicorn
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
-from lib.project import generate_project, project_dev_server
+from starlette import status
+from lib.project import generate_project, project_dev_server, revert_project
 from contextlib import asynccontextmanager
 from globals import app_state
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor
+from pydantic import BaseModel
+from langchain_ollama import ChatOllama
+from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 
 thread_executor: ThreadPoolExecutor
 
@@ -27,15 +32,58 @@ app.add_middleware(
 )
 
 
-@app.post("/api/generate_project", status_code=200)
+@app.post("/api/generate_project")
 def post_generate_project(path: str):
     global thread_executor
 
     with app_state._lock:
         app_state.current_project = path
 
-    wait([thread_executor.submit(generate_project)])
-    project_dev_server()
+    try:
+        generate_project()
+    except RuntimeError as e:
+        return Response(
+            content=f"Project generation failed with: {str(e)}",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    thread_executor.submit(project_dev_server)
+    return Response(status_code=status.HTTP_200_OK)
+
+
+class Model(BaseModel):
+    provider: str
+    model_string: str
+
+
+@app.post("/api/switch_model")
+def post_switch_model(model: Model):
+    new_model = None
+
+    try:
+        if model.provider == "Ollama":
+            new_model = ChatOllama(model=model.model_string, temperature=0)
+        elif model.provider == "Groq":
+            new_model = ChatGroq(model=model.model_string, temperature=0)
+        elif model.provider == "OpenAI":
+            new_model = ChatOpenAI(model=model.model_string, temperature=0)
+    except Exception as e:
+        revert_project()
+        return Response(
+            content=f"Switching models failed with: {str(e)}",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    with app_state._lock:
+        app_state.model = new_model
+
+    return Response(status_code=status.HTTP_200_OK)
+
+
+@app.post("/api/quit")
+def post_quit():
+    logging.info("Exiting unlovable...")
+    exit(0)
 
 
 def serve(executor: ThreadPoolExecutor):

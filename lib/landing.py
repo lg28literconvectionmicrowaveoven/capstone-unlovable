@@ -107,7 +107,6 @@ def launch_app():
         logging.info("Launching tauri app")
         child_proc = subprocess.run(
             launch_cmd,
-            start_new_session=True,
             shell=True,
             check=True,
             capture_output=True,

@@ -62,13 +62,13 @@ I plan to execute these steps to complete my project.
 
 - [DONE] Create CLI and server to host landing page and handle generation
 - [DONE] Write multi-agent generation workflow
-- [TODO] Host generated Next.js application with Unlovable overlay
+- [DONE] Host generated Next.js application with Unlovable overlay
 - [TODO] Chat UI and regeneration workflow
 - [TODO] Build/deployment
 
 ## Conclusion:
 
-I had planned to achieve {this this}. I think I have/have-not achieved the conclusion satisfactorily. The reason for your satisfaction/unsatisfaction.
+I had planned to achieve a complete text to deployed web application. I think I have not achieved the conclusion satisfactorily. Since there are still a couple features left that require a lot of time to implement on the UI front, the product is not complete since it does not take care of building and deploying web applications yet. Moreover the UI can be polished a bit more.
 
 ---
 
